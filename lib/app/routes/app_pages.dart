@@ -13,13 +13,17 @@ import 'package:ambanotes/app/modules/archive_detail/views/archive_detail_view.d
 import 'package:ambanotes/app/modules/archive_detail/bindings/archive_detail_binding.dart';
 import 'package:ambanotes/app/modules/assignment_form/bindings/assignment_form_binding.dart';
 import 'package:ambanotes/app/modules/assignment_form/views/assignment_form_view.dart';
+import 'package:ambanotes/app/modules/login/bindings/login_binding.dart';
+import 'package:ambanotes/app/modules/login/views/login_view.dart';
+import 'package:ambanotes/app/modules/register/bindings/register_binding.dart';
+import 'package:ambanotes/app/modules/register/views/register_view.dart';
 
 part 'app_routes.dart';
 
 class AppPages {
   AppPages._();
 
-  static const INITIAL = Routes.DASHBOARD;
+  static const INITIAL = Routes.LOGIN;
 
   static final routes = [
     GetPage(
@@ -56,6 +60,16 @@ class AppPages {
       name: _Paths.ASSIGNMENT_LETTER_FORM,
       page: () => const AssignmentFormView(),
       binding: AssignmentFormBinding(),
+    ),
+    GetPage(
+      name: _Paths.LOGIN,
+      page: () => const LoginView(),
+      binding: LoginBinding(),
+    ),
+    GetPage(
+      name: _Paths.REGISTER,
+      page: () => const RegisterView(),
+      binding: RegisterBinding(),
     ),
   ];
 }

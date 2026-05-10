@@ -43,13 +43,6 @@ class AssignmentFormController extends GetxController {
     }
   }
 
-  @override
-  void onClose() {
-    letterNumberController.dispose();
-    locationController.dispose();
-    super.onClose();
-  }
-
   Future<void> pickDate(BuildContext context) async {
     final date = await showDatePicker(
       context: context,
@@ -81,6 +74,7 @@ class AssignmentFormController extends GetxController {
     : 'Pilih Waktu';
 
   void submitForm() {
+    FocusManager.instance.primaryFocus?.unfocus();
     if (formKey.currentState!.validate()) {
       if (selectedDate.value == null || selectedTime.value == null) {
         Get.snackbar('Error', 'Silakan pilih tanggal dan waktu', backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
