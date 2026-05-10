@@ -38,8 +38,6 @@ Aplikasi ini dibangun menggunakan teknologi terkini:
 | :---: | :---: | :---: |
 | ![Home](https://via.placeholder.com/200x400?text=Home+View) | ![Chat](https://via.placeholder.com/200x400?text=AmbaAI+Chat) | ![Archive](https://via.placeholder.com/200x400?text=Archive+List) |
 
-*(Ganti link di atas dengan screenshot asli aplikasi Anda)*
-
 ---
 
 ## 🚀 Cara Menjalankan Project
@@ -88,10 +86,6 @@ Kontribusi selalu terbuka! Jika Anda memiliki saran atau menemukan bug, silakan 
 5. Open Pull Request
 
 ---
-
-## 📄 Lisensi
-
-Didistribusikan di bawah Lisensi MIT. Lihat `LICENSE` untuk informasi lebih lanjut.
 
 <p align="center">
   Dibuat dengan ❤️ untuk efisiensi sekretariat.
