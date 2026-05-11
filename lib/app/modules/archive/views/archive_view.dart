@@ -5,6 +5,7 @@ import 'package:ambanotes/app/modules/archive/controllers/archive_controller.dar
 import 'package:ambanotes/app/theme/app_theme.dart';
 import 'package:ambanotes/app/routes/app_pages.dart';
 import 'package:ambanotes/app/data/models/models.dart';
+import 'package:ambanotes/app/widgets/custom_bottom_navbar.dart';
 
 class ArchiveView extends GetView<ArchiveController> {
   const ArchiveView({Key? key}) : super(key: key);
@@ -13,6 +14,7 @@ class ArchiveView extends GetView<ArchiveController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.surface,
+      bottomNavigationBar: const CustomBottomNavBar(currentIndex: 1),
       appBar: AppBar(
         title: const Text("Document Archive"),
       ),

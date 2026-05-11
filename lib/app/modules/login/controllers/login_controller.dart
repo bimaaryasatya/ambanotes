@@ -29,7 +29,7 @@ class LoginController extends GetxController {
     await Future.delayed(const Duration(seconds: 1));
     isLoading.value = false;
 
-    Get.offAllNamed(Routes.DASHBOARD);
+    Get.offAllNamed(Routes.HOME);
   }
 
   void goToRegister() {

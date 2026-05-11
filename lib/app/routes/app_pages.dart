@@ -11,6 +11,8 @@ import 'package:ambanotes/app/modules/profile/views/profile_view.dart';
 import 'package:ambanotes/app/modules/profile/bindings/profile_binding.dart';
 import 'package:ambanotes/app/modules/archive_detail/views/archive_detail_view.dart';
 import 'package:ambanotes/app/modules/archive_detail/bindings/archive_detail_binding.dart';
+import 'package:ambanotes/app/modules/insight/bindings/insight_binding.dart';
+import 'package:ambanotes/app/modules/insight/views/insight_view.dart';
 import 'package:ambanotes/app/modules/assignment_form/bindings/assignment_form_binding.dart';
 import 'package:ambanotes/app/modules/assignment_form/views/assignment_form_view.dart';
 import 'package:ambanotes/app/modules/login/bindings/login_binding.dart';
@@ -55,6 +57,11 @@ class AppPages {
       name: _Paths.PROFILE,
       page: () => const ProfileView(),
       binding: ProfileBinding(),
+    ),
+    GetPage(
+      name: _Paths.INSIGHT,
+      page: () => const InsightView(),
+      binding: InsightBinding(),
     ),
     GetPage(
       name: _Paths.ASSIGNMENT_LETTER_FORM,

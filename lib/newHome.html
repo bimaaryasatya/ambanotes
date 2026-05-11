@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>AmbaNotes - Home</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&amp;family=Public+Sans:wght@500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <!-- Material Symbols Outlined -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Tailwind Configuration -->
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error": "#ffffff",
+                        "background": "#f9f9f9",
+                        "tertiary-fixed": "#a6eff3",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#3f4945",
+                        "on-tertiary-fixed-variant": "#004f53",
+                        "on-tertiary-fixed": "#002021",
+                        "surface-bright": "#f9f9f9",
+                        "on-tertiary-container": "#74bdc1",
+                        "primary-fixed-dim": "#94d3c1",
+                        "outline-variant": "#bfc9c4",
+                        "tertiary": "#003436",
+                        "on-secondary-fixed-variant": "#3b4951",
+                        "on-secondary-container": "#56656e",
+                        "on-primary-fixed": "#00201a",
+                        "on-primary-fixed-variant": "#065043",
+                        "primary": "#00342b",
+                        "tertiary-fixed-dim": "#8ad3d7",
+                        "surface-variant": "#e2e2e2",
+                        "inverse-surface": "#2f3131",
+                        "on-primary": "#ffffff",
+                        "on-background": "#1a1c1c",
+                        "secondary-fixed": "#d6e5ef",
+                        "on-primary-container": "#7ebdac",
+                        "on-surface": "#1a1c1c",
+                        "error-container": "#ffdad6",
+                        "primary-container": "#004d40",
+                        "surface-container-low": "#f3f3f3",
+                        "error": "#ba1a1a",
+                        "secondary-fixed-dim": "#bac9d3",
+                        "on-secondary-fixed": "#0f1d25",
+                        "surface-tint": "#29695b",
+                        "surface-dim": "#dadada",
+                        "surface-container": "#eeeeee",
+                        "inverse-on-surface": "#f1f1f1",
+                        "on-error-container": "#93000a",
+                        "secondary-container": "#d3e2ed",
+                        "on-secondary": "#ffffff",
+                        "surface-container-highest": "#e2e2e2",
+                        "surface-container-high": "#e8e8e8",
+                        "outline": "#707975",
+                        "secondary": "#526069",
+                        "primary-fixed": "#afefdd",
+                        "surface": "#f9f9f9",
+                        "inverse-primary": "#94d3c1",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-container": "#004c4f"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "margin-mobile": "16px",
+                        "xl": "32px",
+                        "base": "8px",
+                        "margin-desktop": "24px",
+                        "xs": "4px",
+                        "lg": "24px",
+                        "sm": "12px",
+                        "md": "16px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["Public Sans"],
+                        "title-lg": ["Public Sans"],
+                        "headline-md": ["Public Sans"],
+                        "label-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0.5px", "fontWeight": "400" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.25px", "fontWeight": "400" }],
+                        "display-lg": ["57px", { "lineHeight": "64px", "letterSpacing": "-0.25px", "fontWeight": "700" }],
+                        "title-lg": ["22px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "headline-md": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.5px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .ai-glow {
+            box-shadow: 0 0 15px rgba(66, 165, 245, 0.2);
+        }
+    </style>
+    <style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+
+<body class="bg-surface text-on-surface antialiased min-h-screen">
+    <!-- TopAppBar -->
+    <header
+        class="fixed w-full top-0 z-50 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 shadow-sm flex justify-between items-center px-4 h-16 transition-colors duration-200">
+        <button
+            class="text-teal-900 dark:text-teal-500 hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded-full flex items-center justify-center">
+            <span class="material-symbols-outlined">menu</span>
+        </button>
+        <div class="text-xl font-bold text-teal-900 dark:text-teal-500 font-sans font-semibold text-lg">AmbaNotes</div>
+        <button
+            class="text-teal-900 dark:text-teal-500 hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded-full flex items-center justify-center">
+            <span class="material-symbols-outlined">notifications</span>
+        </button>
+    </header>
+    <!-- Main Content Area -->
+    <main class="max-w-[1200px] mx-auto px-margin-mobile md:px-margin-desktop pt-[88px] pb-[100px]">
+        <!-- Greeting & Search Header -->
+        <section class="mb-lg">
+            <h1 class="font-headline-md text-headline-md text-on-surface mb-sm tracking-tight">Good Morning, Sarah</h1>
+            <!-- Search Bar (AI Tinted) -->
+            <div
+                class="bg-secondary-fixed text-on-secondary-fixed flex items-center gap-sm px-md py-sm rounded-full shadow-[0px_1px_3px_rgba(0,0,0,0.05)] ai-glow focus-within:ring-2 focus-within:ring-primary-container transition-all">
+                <span class="material-symbols-outlined text-on-secondary-fixed-variant">search</span>
+                <input
+                    class="bg-transparent border-none outline-none w-full font-body-md text-body-md placeholder:text-on-secondary-container p-0 focus:ring-0"
+                    placeholder="Search agendas, files, or ask AmbaAI..." type="text" />
+            </div>
+        </section>
+        <!-- Quick Actions Row (Bento Style) -->
+        <section class="grid grid-cols-4 gap-sm mb-lg">
+            <button
+                class="bg-surface-container-lowest border border-outline-variant/30 rounded-[16px] p-sm flex flex-col items-center justify-center gap-xs shadow-[0px_1px_3px_rgba(0,0,0,0.02)] hover:bg-surface-container-low transition-colors">
+                <span class="material-symbols-outlined text-primary-container"
+                    style="font-variation-settings: 'FILL' 1;">document_scanner</span>
+                <span class="font-label-md text-label-md text-on-surface-variant">Scan</span>
+            </button>
+            <button
+                class="bg-surface-container-lowest border border-outline-variant/30 rounded-[16px] p-sm flex flex-col items-center justify-center gap-xs shadow-[0px_1px_3px_rgba(0,0,0,0.02)] hover:bg-surface-container-low transition-colors">
+                <span class="material-symbols-outlined text-primary-container"
+                    style="font-variation-settings: 'FILL' 1;">upload_file</span>
+                <span class="font-label-md text-label-md text-on-surface-variant">Upload</span>
+            </button>
+            <button
+                class="bg-tertiary-fixed text-on-tertiary-fixed rounded-[16px] p-sm flex flex-col items-center justify-center gap-xs ai-glow hover:bg-tertiary-fixed-dim transition-colors">
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                <span class="font-label-md text-label-md font-semibold">AmbaAI</span>
+            </button>
+            <button
+                class="bg-surface-container-lowest border border-outline-variant/30 rounded-[16px] p-sm flex flex-col items-center justify-center gap-xs shadow-[0px_1px_3px_rgba(0,0,0,0.02)] hover:bg-surface-container-low transition-colors">
+                <span class="material-symbols-outlined text-primary-container"
+                    style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+                <span class="font-label-md text-label-md text-on-surface-variant">Archive</span>
+            </button>
+        </section>
+        <!-- Content Grid (Desktop Layout Support) -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-lg">
+            <!-- Agenda Section -->
+            <section class="md:col-span-8 flex flex-col gap-sm">
+                <h2 class="font-title-lg text-title-lg text-on-surface mb-xs flex items-center justify-between">
+                    Today's Agenda
+                    <button class="text-primary font-label-md text-label-md hover:underline">View All</button>
+                </h2>
+                <!-- Agenda Card 1 -->
+                <div
+                    class="bg-surface-container-lowest rounded-[24px] p-md flex flex-col gap-sm shadow-[0px_1px_3px_rgba(0,0,0,0.05)] border border-outline-variant/20 relative overflow-hidden group hover:shadow-md transition-shadow">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-error"></div>
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-title-lg text-[18px] leading-tight text-on-surface">Invitations to attend</h3>
+                        <span
+                            class="bg-error-container text-on-error-container px-2 py-1 rounded-full font-label-md text-[10px] uppercase tracking-wider font-bold">High</span>
+                    </div>
+                    <div class="flex flex-col gap-xs font-body-md text-body-md text-on-surface-variant mt-xs">
+                        <div class="flex items-center gap-xs">
+                            <span class="material-symbols-outlined text-[18px] text-outline">schedule</span>
+                            <span>09:00 AM - 10:30 AM</span>
+                        </div>
+                        <div class="flex items-center gap-xs">
+                            <span class="material-symbols-outlined text-[18px] text-outline">location_on</span>
+                            <span>Main Conference Room</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-end mt-sm">
+                        <button
+                            class="bg-surface-container-low text-primary-container hover:bg-primary-container hover:text-on-primary-container px-md py-sm rounded-lg font-label-md text-label-md transition-colors flex items-center gap-xs mr-2"><span
+                                class="material-symbols-outlined text-[16px]">description</span>Request Surat
+                            Jalan</button><button
+                            class="bg-surface-container-low text-primary-container hover:bg-primary-container hover:text-on-primary-container px-md py-sm rounded-lg font-label-md text-label-md transition-colors flex items-center gap-xs">
+                            View <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                        </button>
+                    </div>
+                </div>
+                <!-- Agenda Card 2 -->
+                <div
+                    class="bg-surface-container-lowest rounded-[24px] p-md flex flex-col gap-sm shadow-[0px_1px_3px_rgba(0,0,0,0.05)] border border-outline-variant/20 relative overflow-hidden group hover:shadow-md transition-shadow">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-secondary"></div>
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-title-lg text-[18px] leading-tight text-on-surface">Meeting with Director</h3>
+                        <span
+                            class="bg-secondary-container text-on-secondary-container px-2 py-1 rounded-full font-label-md text-[10px] uppercase tracking-wider font-bold">Normal</span>
+                    </div>
+                    <div class="flex flex-col gap-xs font-body-md text-body-md text-on-surface-variant mt-xs">
+                        <div class="flex items-center gap-xs">
+                            <span class="material-symbols-outlined text-[18px] text-outline">schedule</span>
+                            <span>11:00 AM - 12:00 PM</span>
+                        </div>
+                        <div class="flex items-center gap-xs">
+                            <span class="material-symbols-outlined text-[18px] text-outline">location_on</span>
+                            <span>Director's Office</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-end mt-sm">
+                        <button
+                            class="bg-surface-container-low text-primary-container hover:bg-primary-container hover:text-on-primary-container px-md py-sm rounded-lg font-label-md text-label-md transition-colors flex items-center gap-xs mr-2"><span
+                                class="material-symbols-outlined text-[16px]">description</span>Request Surat
+                            Jalan</button><button
+                            class="bg-surface-container-low text-primary-container hover:bg-primary-container hover:text-on-primary-container px-md py-sm rounded-lg font-label-md text-label-md transition-colors flex items-center gap-xs">
+                            View <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                        </button>
+                    </div>
+                </div>
+                <!-- Agenda Card 3 -->
+                <div
+                    class="bg-surface-container-lowest rounded-[24px] p-md flex flex-col gap-sm shadow-[0px_1px_3px_rgba(0,0,0,0.05)] border border-outline-variant/20 relative overflow-hidden group hover:shadow-md transition-shadow">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-tertiary-container"></div>
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-title-lg text-[18px] leading-tight text-on-surface">Contract Expiry - Level 4
+                        </h3>
+                        <span
+                            class="bg-tertiary-container text-on-tertiary-container px-2 py-1 rounded-full font-label-md text-[10px] uppercase tracking-wider font-bold">Review</span>
+                    </div>
+                    <div class="flex flex-col gap-xs font-body-md text-body-md text-on-surface-variant mt-xs">
+                        <div class="flex items-center gap-xs">
+                            <span class="material-symbols-outlined text-[18px] text-outline">schedule</span>
+                            <span>02:00 PM - 03:00 PM</span>
+                        </div>
+                        <div class="flex items-center gap-xs">
+                            <span class="material-symbols-outlined text-[18px] text-outline">folder_open</span>
+                            <span>Secretariat File #402</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-end mt-sm">
+                        <button
+                            class="bg-surface-container-low text-primary-container hover:bg-primary-container hover:text-on-primary-container px-md py-sm rounded-lg font-label-md text-label-md transition-colors flex items-center gap-xs">
+                            View <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+            <!-- Mini Calendar Sidebar (Desktop) -->
+            <aside class="md:col-span-4 flex flex-col gap-sm mt-lg md:mt-0">
+                <h2 class="font-title-lg text-title-lg text-on-surface mb-xs">Calendar</h2>
+                <div
+                    class="bg-surface-container-lowest rounded-[24px] p-md shadow-[0px_1px_3px_rgba(0,0,0,0.05)] border border-outline-variant/20">
+                    <div class="flex justify-between items-center mb-md">
+                        <span class="font-title-lg text-[16px] font-semibold text-on-surface">October 2023</span>
+                        <div class="flex gap-2">
+                            <button class="text-outline hover:text-primary"><span
+                                    class="material-symbols-outlined">chevron_left</span></button>
+                            <button class="text-outline hover:text-primary"><span
+                                    class="material-symbols-outlined">chevron_right</span></button>
+                        </div>
+                    </div>
+                    <!-- Days Header -->
+                    <div
+                        class="grid grid-cols-7 gap-1 text-center font-label-md text-[10px] text-on-surface-variant mb-2 uppercase tracking-wide">
+                        <div>S</div>
+                        <div>M</div>
+                        <div>T</div>
+                        <div>W</div>
+                        <div>T</div>
+                        <div>F</div>
+                        <div>S</div>
+                    </div>
+                    <!-- Calendar Grid (Simplified for visual structure) -->
+                    <div class="grid grid-cols-7 gap-1 text-center font-body-md text-[14px]">
+                        <!-- Week 1 -->
+                        <div class="p-1 text-outline-variant">1</div>
+                        <div class="p-1 text-outline-variant">2</div>
+                        <div class="p-1">3</div>
+                        <div class="p-1">4</div>
+                        <div class="p-1">5</div>
+                        <div class="p-1 relative">6<span
+                                class="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-error rounded-full"></span>
+                        </div>
+                        <div class="p-1">7</div>
+                        <!-- Week 2 -->
+                        <div class="p-1">8</div>
+                        <div class="p-1">9</div>
+                        <div class="p-1">10</div>
+                        <div class="p-1 relative">11<span
+                                class="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-tertiary-container rounded-full"></span>
+                        </div>
+                        <div class="p-1">12</div>
+                        <div class="p-1">13</div>
+                        <div class="p-1">14</div>
+                        <!-- Week 3 -->
+                        <div class="p-1">15</div>
+                        <div class="p-1">16</div>
+                        <div
+                            class="p-1 bg-primary-container text-on-primary-container rounded-full aspect-square flex items-center justify-center font-semibold">
+                            17</div>
+                        <div class="p-1">18</div>
+                        <div class="p-1 relative">19<span
+                                class="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full"></span>
+                        </div>
+                        <div class="p-1">20</div>
+                        <div class="p-1">21</div>
+                        <!-- Week 4 -->
+                        <div class="p-1">22</div>
+                        <div class="p-1">23</div>
+                        <div class="p-1">24</div>
+                        <div class="p-1">25</div>
+                        <div class="p-1">26</div>
+                        <div class="p-1">27</div>
+                        <div class="p-1">28</div>
+                        <!-- Week 5 -->
+                        <div class="p-1">29</div>
+                        <div class="p-1">30</div>
+                        <div class="p-1">31</div>
+                        <div class="p-1 text-outline-variant">1</div>
+                        <div class="p-1 text-outline-variant">2</div>
+                        <div class="p-1 text-outline-variant">3</div>
+                        <div class="p-1 text-outline-variant">4</div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </main>
+    <!-- Floating Action Button (Contextual per guidance) -->
+    <button
+        class="fixed bottom-24 right-4 md:right-8 bg-primary text-on-primary rounded-[20px] p-4 shadow-[0_4px_8px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_12px_rgba(0,0,0,0.2)] transition-shadow z-40 flex items-center justify-center">
+        <span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">add</span>
+    </button>
+    <!-- BottomNavBar (Mobile Only based on platform rules, but executing JSON structure exactly) -->
+    <nav
+        class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-3 bg-white/80 backdrop-blur-lg border-t border-outline-variant/30 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] rounded-t-[28px]">
+        <a class="flex flex-col items-center justify-center text-primary transition-colors" href="#">
+            <span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">home</span>
+            <span class="font-label-md text-[11px] mt-1">Home</span>
+        </a>
+        <a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors"
+            href="#">
+            <span class="material-symbols-outlined text-[24px]">description</span>
+            <span class="font-label-md text-[11px] mt-1">Files</span>
+        </a>
+        <a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors"
+            href="#">
+            <span class="material-symbols-outlined text-[24px]">insights</span>
+            <span class="font-label-md text-[11px] mt-1">Insights</span>
+        </a>
+        <a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors"
+            href="#">
+            <span class="material-symbols-outlined text-[24px]">auto_awesome</span>
+            <span class="font-label-md text-[11px] mt-1">Chat</span>
+        </a>
+        <a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors"
+            href="#">
+            <span class="material-symbols-outlined text-[24px]">person</span>
+            <span class="font-label-md text-[11px] mt-1">Profile</span>
+        </a>
+    </nav>
+</body>
+
+</html>

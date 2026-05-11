@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ambanotes/app/modules/add/controllers/add_controller.dart';
 import 'package:ambanotes/app/theme/app_theme.dart';
+import 'package:ambanotes/app/widgets/custom_bottom_navbar.dart';
 
 class AddView extends GetView<AddController> {
   const AddView({Key? key}) : super(key: key);
@@ -11,6 +12,7 @@ class AddView extends GetView<AddController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.surface,
+      bottomNavigationBar: const CustomBottomNavBar(currentIndex: 2),
       appBar: AppBar(
         title: const Text("Create New"),
       ),

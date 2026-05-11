@@ -15,7 +15,9 @@ class ArchiveController extends GetxController {
   void onInit() {
     super.onInit();
     // In a real app we might fetch from a repository, here we link to HomeController's data
-    final homeController = Get.find<HomeController>();
+    final homeController = Get.isRegistered<HomeController>() 
+        ? Get.find<HomeController>() 
+        : Get.put(HomeController());
     // Clone the list to allow local modifications without immediately affecting home unless desired
     documents.assignAll(homeController.documents.map((d) => Document(
       id: d.id,

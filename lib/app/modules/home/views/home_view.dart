@@ -4,7 +4,8 @@ import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../controllers/home_controller.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
-import '../../dashboard/controllers/dashboard_controller.dart';
+import 'package:ambanotes/app/routes/app_pages.dart';
+import 'package:ambanotes/app/widgets/custom_bottom_navbar.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({Key? key}) : super(key: key);
@@ -13,6 +14,7 @@ class HomeView extends GetView<HomeController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.surface,
+      bottomNavigationBar: const CustomBottomNavBar(currentIndex: 0),
       appBar: AppBar(
         title: const Text("AmbaNotes"),
         leading: IconButton(
@@ -95,9 +97,9 @@ class HomeView extends GetView<HomeController> {
         return InkWell(
           onTap: () {
             if (action['label'] == 'AMBAAI') {
-              Get.find<DashboardController>().changeTabIndex(3);
+              Get.offAllNamed(Routes.CHAT);
             } else if (action['label'] == 'ARCHIVE') {
-              Get.find<DashboardController>().changeTabIndex(1);
+              Get.offAllNamed(Routes.ARCHIVE);
             }
           },
           child: Container(

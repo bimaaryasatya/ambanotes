@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../controllers/profile_controller.dart';
+import 'package:ambanotes/app/widgets/custom_bottom_navbar.dart';
 
 class ProfileView extends GetView<ProfileController> {
   const ProfileView({Key? key}) : super(key: key);
@@ -11,6 +12,7 @@ class ProfileView extends GetView<ProfileController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.surface,
+      bottomNavigationBar: const CustomBottomNavBar(currentIndex: 4),
       body: CustomScrollView(
         slivers: [
           SliverAppBar(

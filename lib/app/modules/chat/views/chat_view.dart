@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../controllers/chat_controller.dart';
+import 'package:ambanotes/app/widgets/custom_bottom_navbar.dart';
 
 class ChatView extends GetView<ChatController> {
   const ChatView({Key? key}) : super(key: key);
@@ -13,6 +14,7 @@ class ChatView extends GetView<ChatController> {
 
     return Scaffold(
       backgroundColor: AppTheme.surface,
+      bottomNavigationBar: const CustomBottomNavBar(currentIndex: 3),
       appBar: AppBar(
         title: const Text("AmbaAI"),
       ),
