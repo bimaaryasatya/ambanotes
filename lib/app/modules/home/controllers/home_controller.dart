@@ -245,4 +245,56 @@ class HomeController extends GetxController {
       );
     }
   }
+
+  Future<void> confirmDeleteReminder(AgendaItem item) async {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Hapus Agenda', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text('Apakah Anda yakin ingin menghapus agenda "${item.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Get.back();
+              isLoading.value = true;
+              try {
+                final success = await apiService.deleteReminder(item.id);
+                if (success) {
+                  Get.snackbar(
+                    'Berhasil',
+                    'Agenda berhasil dihapus.',
+                    snackPosition: SnackPosition.BOTTOM,
+                    backgroundColor: Colors.green.withOpacity(0.9),
+                    colorText: Colors.white,
+                  );
+                  fetchDashboardData(); // Refresh list
+                } else {
+                  Get.snackbar(
+                    'Gagal',
+                    'Gagal menghapus agenda.',
+                    snackPosition: SnackPosition.BOTTOM,
+                    backgroundColor: Colors.red.withOpacity(0.9),
+                    colorText: Colors.white,
+                  );
+                }
+              } catch (e) {
+                print("Delete reminder error: $e");
+              } finally {
+                isLoading.value = false;
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
 }

@@ -1,5 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import '../../../data/services/api_service.dart';
 
 class ChatMessage {
@@ -80,12 +82,69 @@ class ChatController extends GetxController {
   final currentSession = Rxn<ChatSession>();
   final messages = <ChatMessage>[].obs;
   final isTyping = false.obs;
+  final inputOffset = 0.0.obs;
+
+  final FlutterTts flutterTts = FlutterTts();
+  final speakingMsgId = ''.obs;
 
   @override
   void onInit() {
     super.onInit();
     loadSessionsFromStorage();
     _checkArguments();
+    _initTts();
+  }
+
+  void _initTts() {
+    try {
+      flutterTts.setLanguage("id-ID");
+      flutterTts.setCompletionHandler(() {
+        speakingMsgId.value = '';
+      });
+      flutterTts.setErrorHandler((msg) {
+        speakingMsgId.value = '';
+      });
+    } catch (e) {
+      print("TTS init error: $e");
+    }
+  }
+
+  void speakMessage(String text, String msgId) async {
+    print("speakMessage called for msgId: $msgId, text length: ${text.length}");
+    try {
+      if (speakingMsgId.value == msgId) {
+        print("Stopping TTS speaking");
+        await flutterTts.stop();
+        speakingMsgId.value = '';
+      } else {
+        print("Stopping previous TTS speaking and starting new one");
+        await flutterTts.stop();
+        speakingMsgId.value = msgId;
+        // Clean up markdown markers so the voice speaks clean sentences
+        final cleanText = text.replaceAll(RegExp(r'\*|_|#|`|\[|\]|\(|\)'), '');
+        print("Speaking clean text: $cleanText");
+        var result = await flutterTts.speak(cleanText);
+        print("TTS speak result: $result");
+      }
+    } catch (e, stack) {
+      print("Error in speakMessage: $e");
+      print(stack);
+      speakingMsgId.value = '';
+      Get.snackbar(
+        "Kesalahan TTS",
+        "Gagal memutar audio. Mohon stop dan run ulang aplikasi (rebuild native plugin) agar fitur Text to Speech dapat diakses.",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.9),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 5),
+      );
+    }
+  }
+
+  @override
+  void onClose() {
+    flutterTts.stop();
+    super.onClose();
   }
 
   void loadSessionsFromStorage() {

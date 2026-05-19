@@ -85,6 +85,7 @@ class RegisterController extends GetxController {
       passwordInput: passwordController.text,
       action: action,
       orgName: orgName,
+      invitationCode: setupOption.value == 'invitation' ? invitationCodeController.text.trim() : null,
     );
     isLoading.value = false;
 

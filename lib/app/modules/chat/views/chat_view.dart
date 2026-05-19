@@ -1,5 +1,8 @@
+import 'dart:ui';
 import 'package:ambanotes/app/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -26,91 +29,102 @@ class ChatView extends GetView<ChatController> {
             tooltip: "Buka Histori Chat",
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.plusCircle, color: AppTheme.primary),
-            onPressed: () => controller.createNewSession(),
-            tooltip: "Mulai Chat Baru",
-          ),
-        ],
       ),
       drawer: _buildHistoryDrawer(context),
-      body: Column(
+      body: Stack(
         children: [
-          Obx(() {
-            final activeSession = controller.currentSession.value;
-            if (activeSession != null && activeSession.documentTitle != null) {
-              return Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                color: AppTheme.aiSoft.withOpacity(0.5),
-                child: Row(
-                  children: [
-                    const Icon(LucideIcons.fileText, size: 16, color: AppTheme.aiAccent),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        "Konteks Dokumen: ${activeSession.documentTitle}",
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.aiAccent,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () => controller.createNewSession(),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppTheme.aiAccent.withOpacity(0.3)),
-                        ),
-                        child: const Text(
-                          "Bersihkan",
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.aiAccent,
+          Column(
+            children: [
+              Obx(() {
+                final activeSession = controller.currentSession.value;
+                if (activeSession != null && activeSession.documentTitle != null) {
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    color: AppTheme.aiSoft.withOpacity(0.5),
+                    child: Row(
+                      children: [
+                        const Icon(LucideIcons.fileText, size: 16, color: AppTheme.aiAccent),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "Konteks Dokumen: ${activeSession.documentTitle}",
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.aiAccent,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () => controller.createNewSession(),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppTheme.aiAccent.withOpacity(0.3)),
+                            ),
+                            child: const Text(
+                              "Bersihkan",
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.aiAccent,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              );
-            }
-            return const SizedBox.shrink();
-          }),
-          Expanded(
-            child: Obx(() {
-              final msgs = controller.messages;
-              final showTyping = controller.isTyping.value;
-              final count = msgs.length + (showTyping ? 1 : 0);
-              
-              if (msgs.isEmpty && !showTyping) {
-                return _buildEmptyState();
-              }
-              
-              return ListView.builder(
-                padding: const EdgeInsets.all(20),
-                reverse: false,
-                itemCount: count,
-                itemBuilder: (context, index) {
-                  if (index == msgs.length) {
-                    return _buildTypingIndicator();
+                  );
+                }
+                return const SizedBox.shrink();
+              }),
+              Expanded(
+                child: Obx(() {
+                  final msgs = controller.messages;
+                  final showTyping = controller.isTyping.value;
+                  final count = msgs.length + (showTyping ? 1 : 0);
+                  
+                  if (msgs.isEmpty && !showTyping) {
+                    return _buildEmptyState();
                   }
-                  final msg = msgs[index];
-                  return _buildMessageBubble(msg);
-                },
-              );
-            }),
+                  
+                  return NotificationListener<ScrollUpdateNotification>(
+                    onNotification: (notification) {
+                      if (notification.scrollDelta != null) {
+                        double newOffset = controller.inputOffset.value - notification.scrollDelta!;
+                        controller.inputOffset.value = newOffset.clamp(0.0, 150.0);
+                      }
+                      return false;
+                    },
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 140),
+                      reverse: false,
+                      itemCount: count,
+                      itemBuilder: (context, index) {
+                        if (index == msgs.length) {
+                          return _buildTypingIndicator();
+                        }
+                        final msg = msgs[index];
+                        return _buildMessageBubble(msg);
+                      },
+                    ),
+                  );
+                }),
+              ),
+            ],
           ),
-          _buildChatInput(textController),
+          Obx(() => Positioned(
+            left: 0,
+            right: 0,
+            bottom: -controller.inputOffset.value,
+            child: _buildChatInput(textController),
+          )),
         ],
       ),
     );
@@ -404,6 +418,76 @@ class ChatView extends GetView<ChatController> {
                       h3: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: isUser ? Colors.white : AppTheme.onSurface),
                     ),
                   ),
+                  if (!isUser) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Obx(() {
+                          final isSpeaking = controller.speakingMsgId.value == msg.id;
+                          return InkWell(
+                            onTap: () => controller.speakMessage(msg.content, msg.id),
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: isSpeaking ? AppTheme.primary.withOpacity(0.1) : Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isSpeaking ? AppTheme.primary : AppTheme.outlineVariant.withOpacity(0.4),
+                                ),
+                              ),
+                              child: Icon(
+                                isSpeaking ? LucideIcons.volumeX : LucideIcons.volume2,
+                                size: 16,
+                                color: isSpeaking ? AppTheme.primary : AppTheme.secondary,
+                              ),
+                            ),
+                          );
+                        }),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () {
+                            Clipboard.setData(ClipboardData(text: msg.content));
+                            Get.snackbar(
+                              "Salin Pesan",
+                              "Pesan berhasil disalin ke papan klip!",
+                              snackPosition: SnackPosition.BOTTOM,
+                              backgroundColor: Colors.white.withOpacity(0.95),
+                              colorText: AppTheme.primary,
+                              margin: const EdgeInsets.all(16),
+                              duration: const Duration(seconds: 2),
+                              borderRadius: 12,
+                              icon: const Icon(LucideIcons.copy, color: AppTheme.primary),
+                              boxShadows: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                )
+                              ],
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: AppTheme.outlineVariant.withOpacity(0.4),
+                              ),
+                            ),
+                            child: const Icon(
+                              LucideIcons.copy,
+                              size: 16,
+                              color: AppTheme.secondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   if (!isUser && msg.references != null && msg.references!.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     const Divider(height: 12),
@@ -505,79 +589,87 @@ class ChatView extends GetView<ChatController> {
   }
 
   Widget _buildChatInput(TextEditingController textController) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.transparent,
-            AppTheme.surface.withOpacity(0.8),
-            AppTheme.surface
-          ],
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildSuggestionChips(textController),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-              border:
-                  Border.all(color: AppTheme.outlineVariant.withOpacity(0.5)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 4),
-                )
-              ],
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                IconButton(
-                  icon: const Icon(LucideIcons.paperclip,
-                      color: AppTheme.secondary),
-                  onPressed: () {},
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: TextField(
-                      controller: textController,
-                      decoration: const InputDecoration(
-                        hintText: "Tanyakan apa saja ke AmbaAI...",
-                        border: InputBorder.none,
-                        isCollapsed: true,
-                      ),
-                      maxLines: 5,
-                      minLines: 1,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
-                        color: AppTheme.primary, shape: BoxShape.circle),
-                    child: const Icon(LucideIcons.send,
-                        color: Colors.white, size: 20),
-                  ),
-                  onPressed: () {
-                    controller.sendMessage(textController.text);
-                    textController.clear();
-                  },
-                ),
-              ],
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(0, 8, 0, 20),
+          decoration: BoxDecoration(
+            color: AppTheme.surface.withOpacity(0.75),
+            border: Border(
+              top: BorderSide(
+                color: AppTheme.outlineVariant.withOpacity(0.3),
+                width: 0.5,
+              ),
             ),
           ),
-        ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildSuggestionChips(textController),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.4)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, -2),
+                      )
+                    ],
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(LucideIcons.paperclip, color: AppTheme.secondary, size: 20),
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.all(10),
+                        onPressed: () {},
+                      ),
+                      Expanded(
+                        child: TextField(
+                          controller: textController,
+                          decoration: const InputDecoration(
+                            hintText: "Tanyakan apa saja ke AmbaAI...",
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                            isDense: true,
+                          ),
+                          maxLines: 5,
+                          minLines: 1,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ),
+                      IconButton(
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.all(6),
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: AppTheme.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(LucideIcons.send, color: Colors.white, size: 16),
+                        ),
+                        onPressed: () {
+                          controller.sendMessage(textController.text);
+                          textController.clear();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -589,32 +681,53 @@ class ChatView extends GetView<ChatController> {
       {'label': 'Tolong ringkas dokumen terbaru', 'icon': LucideIcons.fileEdit},
     ];
     return SizedBox(
-      height: 36,
+      height: 42,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         itemCount: chips.length,
         itemBuilder: (context, index) {
           final chip = chips[index];
-          return Container(
-            margin: const EdgeInsets.only(right: 8),
-            child: ActionChip(
-              avatar: Icon(chip['icon'] as IconData,
-                  size: 14, color: AppTheme.primary),
-              label: Text(
-                chip['label'] as String,
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primary),
+          return GestureDetector(
+            onTap: () {
+              final txt = chip['label'] as String;
+              controller.sendMessage(txt);
+            },
+            child: Container(
+              margin: const EdgeInsets.only(right: 8, bottom: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.5)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  )
+                ],
               ),
-              backgroundColor: Colors.white,
-              side: const BorderSide(color: AppTheme.outlineVariant),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-              onPressed: () {
-                textController.text = chip['label'] as String;
-              },
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    chip['icon'] as IconData,
+                    size: 13,
+                    color: AppTheme.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    chip['label'] as String,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primary,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },

@@ -27,15 +27,26 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
                 const SizedBox(height: 24),
                 const Text('Detail Surat', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.onSurface)),
                 const SizedBox(height: 16),
-                Obx(() => controller.apiService.isOwner 
-                  ? Column(
-                      children: [
-                        _buildDropdown(),
-                        const SizedBox(height: 16),
-                      ],
-                    )
-                  : const SizedBox.shrink()
+                _buildDropdown(
+                  label: 'Kop Surat',
+                  icon: LucideIcons.building,
+                  value: controller.selectedKopSurat,
+                  options: controller.kopSuratOptions,
+                  onChanged: (val) {
+                    if (val != null) controller.selectedKopSurat.value = val;
+                  },
                 ),
+                const SizedBox(height: 16),
+                _buildDropdown(
+                  label: 'Tanda Tangan (TTD)',
+                  icon: LucideIcons.penTool,
+                  value: controller.selectedTtd,
+                  options: controller.ttdOptions,
+                  onChanged: (val) {
+                    if (val != null) controller.selectedTtd.value = val;
+                  },
+                ),
+                const SizedBox(height: 16),
                 _buildTextField(
                   label: 'Nomor Surat',
                   controller: controller.letterNumberController,
@@ -119,21 +130,25 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
     );
   }
 
-  Widget _buildDropdown() {
+  Widget _buildDropdown({
+    required String label,
+    required IconData icon,
+    required RxString value,
+    required RxList<String> options,
+    required ValueChanged<String?> onChanged,
+  }) {
     return Obx(() => DropdownButtonFormField<String>(
       decoration: InputDecoration(
-        labelText: 'Kop Surat',
-        prefixIcon: const Icon(LucideIcons.building, color: AppTheme.outline),
+        labelText: label,
+        prefixIcon: Icon(icon, color: AppTheme.outline),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppTheme.outlineVariant)),
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppTheme.outlineVariant)),
       ),
-      value: controller.selectedKopSurat.value,
-      items: controller.kopSuratOptions.map((kop) {
-        return DropdownMenuItem(value: kop, child: Text(kop));
+      value: value.value.isNotEmpty && options.contains(value.value) ? value.value : (options.isNotEmpty ? options.first : null),
+      items: options.map((opt) {
+        return DropdownMenuItem(value: opt, child: Text(opt));
       }).toList(),
-      onChanged: (val) {
-        if (val != null) controller.selectedKopSurat.value = val;
-      },
+      onChanged: onChanged,
     ));
   }
 

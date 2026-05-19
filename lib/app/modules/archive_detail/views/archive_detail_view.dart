@@ -52,8 +52,12 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
                 _buildAISummaryCard(),
                 _buildSecuritySuggestionCard(),
                 const SizedBox(height: 24),
+                if (controller.apiService.isOwner) ...[
+                  _buildDispositionCard(context),
+                  const SizedBox(height: 24),
+                ],
                 _buildMetadataSection(),
-                Obx(() {
+                () {
                   final showReminder = controller.document.type.toLowerCase().contains('undangan') || 
                                        controller.document.type.toLowerCase().contains('invitation') ||
                                        controller.document.summary.toLowerCase().contains('rapat') || 
@@ -81,7 +85,7 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
                       ),
                     ),
                   );
-                }),
+                }(),
                 const SizedBox(height: 24),
                 _buildDocumentPreview(context),
                 if (controller.document.type.toLowerCase().contains('invitation') || 
@@ -579,5 +583,99 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
         ],
       ),
     );
+  }
+
+  Widget _buildDispositionCard(BuildContext context) {
+    return Obx(() {
+      final isDispatched = controller.delegationId.value != null;
+      final delName = controller.delegationName.value ?? 'Belum Ditentukan';
+      
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: isDispatched ? Colors.green.withOpacity(0.3) : Colors.amber.withOpacity(0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isDispatched ? LucideIcons.send : LucideIcons.alertTriangle,
+                  color: isDispatched ? Colors.green : Colors.amber,
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  "Disposisi Surat",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.onSurface),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              "Tentukan divisi penerima dokumen ini agar dapat diakses oleh staff pada divisi tersebut.",
+              style: TextStyle(fontSize: 13, color: AppTheme.onSurfaceVariant, height: 1.5),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: isDispatched ? Colors.green.withOpacity(0.05) : Colors.amber.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isDispatched ? LucideIcons.users : LucideIcons.eyeOff,
+                    size: 16,
+                    color: isDispatched ? Colors.green : Colors.amber,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      isDispatched
+                          ? "Didisposisikan ke: $delName"
+                          : "Status: Draf (Hanya Owner yang dapat melihat)",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isDispatched ? Colors.green : Colors.amber.shade800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: () => controller.suggestAndShowDispositionDialog(context),
+                icon: const Icon(LucideIcons.sparkles, size: 16, color: Colors.white),
+                label: Text(
+                  isDispatched ? "Ubah Disposisi" : "Kirim / Disposisi Surat",
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }

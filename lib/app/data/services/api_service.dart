@@ -13,6 +13,7 @@ class ApiService extends GetxService {
   final orgId = RxnString();
   final delegationId = RxnString();
   final delegationName = RxnString();
+  final inviteCode = RxnString();
   final googleDriveConnected = false.obs;
 
   bool get isAuthenticated => token.value != null;
@@ -50,6 +51,11 @@ class ApiService extends GetxService {
   Future<Response> _delete(String path) async {
     final url = '${baseUrl.value}$path';
     return await _connect.delete(url);
+  }
+
+  Future<Response> _put(String path, dynamic body) async {
+    final url = '${baseUrl.value}$path';
+    return await _connect.put(url, body);
   }
 
   // --- Auth Service Endpoints ---
@@ -94,6 +100,7 @@ class ApiService extends GetxService {
     required String passwordInput,
     required String action,
     String? orgName,
+    String? invitationCode,
   }) async {
     try {
       final payload = {
@@ -104,6 +111,9 @@ class ApiService extends GetxService {
       };
       if (orgName != null && orgName.isNotEmpty) {
         payload['org_name'] = orgName;
+      }
+      if (invitationCode != null && invitationCode.isNotEmpty) {
+        payload['invitation_code'] = invitationCode;
       }
 
       final response = await _post('/auth/register', payload);
@@ -138,6 +148,7 @@ class ApiService extends GetxService {
         orgId.value = body['org_id'];
         delegationId.value = body['delegation_id'];
         delegationName.value = body['delegation_name'] ?? 'General';
+        inviteCode.value = body['invite_code'];
         googleDriveConnected.value = body['google_drive_connected'] == true;
       }
     } catch (e) {
@@ -326,12 +337,13 @@ class ApiService extends GetxService {
   }
 
   Future<bool> uploadAsset(
-      String assetType, String targetDelegationId, String base64Image) async {
+      String assetType, String targetDelegationId, String base64Image, String name) async {
     try {
       final response = await _post('/auth/assets', {
         'type': assetType,
         'delegation_id': targetDelegationId,
         'image_data': base64Image,
+        'name': name,
       });
       return response.statusCode == 201;
     } catch (e) {
@@ -339,6 +351,42 @@ class ApiService extends GetxService {
       return false;
     }
   }
+
+  Future<List<dynamic>> getAssets() async {
+    try {
+      final response = await _get('/auth/assets');
+      if (response.statusCode == 200) {
+        return response.body as List<dynamic>;
+      }
+    } catch (e) {
+      print("Get assets error: $e");
+    }
+    return [];
+  }
+
+  Future<bool> updateDelegation(String delegationId, String name) async {
+    try {
+      final response = await _put('/auth/delegations/$delegationId', {
+        'name': name,
+      });
+      return response.statusCode == 200;
+    } catch (e) {
+      print("Update delegation error: $e");
+      return false;
+    }
+  }
+
+  Future<bool> deleteDelegation(String delegationId) async {
+    try {
+      final response = await _delete('/auth/delegations/$delegationId');
+      return response.statusCode == 200;
+    } catch (e) {
+      print("Delete delegation error: $e");
+      return false;
+    }
+  }
+
+
 
   Future<String?> getGoogleConnectUrl() async {
     try {
@@ -403,11 +451,15 @@ class ApiService extends GetxService {
   Future<List<dynamic>> listDocuments() async {
     try {
       final response = await _get('/document/list');
+      print("[DEBUG listDocuments] Response status code: ${response.statusCode}");
+      print("[DEBUG listDocuments] Response body: ${response.body}");
       if (response.statusCode == 200) {
         return response.body as List<dynamic>;
+      } else {
+        print("[DEBUG listDocuments] Failed to fetch documents list: status=${response.statusCode}, body=${response.body}");
       }
     } catch (e) {
-      print("List documents error: $e");
+      print("[DEBUG listDocuments] Network Exception: $e");
     }
     return [];
   }
@@ -430,6 +482,18 @@ class ApiService extends GetxService {
       return response.statusCode == 200;
     } catch (e) {
       print("Delete document error: $e");
+      return false;
+    }
+  }
+
+  Future<bool> dispositionDocument(String docId, String delegationId) async {
+    try {
+      final response = await _post('/document/disposition/$docId', {
+        'delegation_id': delegationId,
+      });
+      return response.statusCode == 200;
+    } catch (e) {
+      print("Disposition document error: $e");
       return false;
     }
   }
@@ -496,7 +560,7 @@ class ApiService extends GetxService {
     return [];
   }
 
-  Future<bool> createReminder({
+  Future<Map<String, dynamic>?> createReminder({
     required String task,
     required String date,
     String? time,
@@ -511,11 +575,13 @@ class ApiService extends GetxService {
         'location': location ?? '',
         'doc_id': docId ?? '',
       });
-      return response.statusCode == 201;
+      if (response.statusCode == 201 && response.body != null) {
+        return response.body as Map<String, dynamic>;
+      }
     } catch (e) {
       print("Create reminder error: $e");
-      return false;
     }
+    return null;
   }
 
   Future<bool> deleteReminder(String id) async {

@@ -13,18 +13,15 @@ class AssignmentFormController extends GetxController {
   final selectedDate = Rx<DateTime?>(null);
   final selectedTime = Rx<TimeOfDay?>(null);
   
-  final selectedKopSurat = 'Kop Utama Institusi'.obs;
+  final selectedKopSurat = ''.obs;
+  final selectedTtd = ''.obs;
   final sourceDocumentTitle = 'Undangan'.obs;
   final isLoading = false.obs;
   
   String docId = 'unknown';
 
-  final List<String> kopSuratOptions = [
-    'Kop Utama Institusi',
-    'Kop Divisi HR',
-    'Kop Divisi Operasional',
-    'Kop Kepanitiaan Acara',
-  ];
+  final kopSuratOptions = <String>[].obs;
+  final ttdOptions = <String>[].obs;
 
   @override
   void onInit() {
@@ -35,6 +32,44 @@ class AssignmentFormController extends GetxController {
       letterNumberController.text = args['nomor_surat'] ?? '';
       locationController.text = args['organisasi'] ?? '';
       sourceDocumentTitle.value = args['title'] ?? args['perihal'] ?? 'Undangan';
+    }
+    loadAssets();
+  }
+
+  Future<void> loadAssets() async {
+    try {
+      final assets = await apiService.getAssets();
+      final kops = <String>[];
+      final ttds = <String>[];
+
+      for (var asset in assets) {
+        final type = asset['type'];
+        final name = asset['name'] ?? '';
+        if (name.isNotEmpty) {
+          if (type == 'letterhead') {
+            kops.add(name);
+          } else if (type == 'signature') {
+            ttds.add(name);
+          }
+        }
+      }
+
+      kopSuratOptions.assignAll(kops);
+      ttdOptions.assignAll(ttds);
+
+      if (kopSuratOptions.isNotEmpty) {
+        selectedKopSurat.value = kopSuratOptions.first;
+      } else {
+        selectedKopSurat.value = 'Kop Utama';
+      }
+
+      if (ttdOptions.isNotEmpty) {
+        selectedTtd.value = ttdOptions.first;
+      } else {
+        selectedTtd.value = 'TTD Utama';
+      }
+    } catch (e) {
+      print("Load assets error: $e");
     }
   }
 
@@ -81,8 +116,8 @@ class AssignmentFormController extends GetxController {
       final location = locationController.text;
       final letterNo = letterNumberController.text;
       
-      // Default to delegation name if member, otherwise owner chooses from dropdown
-      final kop = apiService.isOwner ? selectedKopSurat.value : (apiService.delegationName.value ?? 'Kop Utama Institusi');
+      final kop = selectedKopSurat.value;
+      final ttd = selectedTtd.value;
 
       isLoading.value = true;
       final result = await apiService.generateSuratTugas(
@@ -92,6 +127,7 @@ class AssignmentFormController extends GetxController {
         time: timeStr,
         location: location,
         kop: kop,
+        ttd: ttd,
       );
       isLoading.value = false;
 

@@ -27,6 +27,14 @@ class ArchiveDetailController extends GetxController {
   final driveWebViewLink = ''.obs;
   final driveContentLink = ''.obs;
   final mimetype = ''.obs;
+
+  final delegationId = RxnString();
+  final delegationName = RxnString();
+  final delegations = <Map<String, dynamic>>[].obs;
+  
+  final isAnalyzingDisposition = false.obs;
+  final aiSuggestedDelegation = ''.obs;
+  final aiSuggestedReason = ''.obs;
  
   @override
   void onInit() {
@@ -74,6 +82,19 @@ class ArchiveDetailController extends GetxController {
           driveWebViewLink.value = '';
           driveContentLink.value = '';
           base64Image.value = detail['file_data'] ?? '';
+        }
+
+        delegationId.value = detail['delegation_id'];
+        if (apiService.isOwner) {
+          final list = await apiService.getDelegations();
+          delegations.assignAll(List<Map<String, dynamic>>.from(list));
+          
+          if (delegationId.value != null) {
+            final found = delegations.firstWhereOrNull((d) => d['_id'] == delegationId.value);
+            delegationName.value = found != null ? found['name'] : 'Belum Ditentukan';
+          } else {
+            delegationName.value = 'Belum Ditentukan';
+          }
         }
       }
     } catch (e) {
@@ -406,21 +427,33 @@ class ArchiveDetailController extends GetxController {
               Get.back();
               isLoading.value = true;
               try {
-                final success = await apiService.createReminder(
+                final result = await apiService.createReminder(
                   task: taskController.text.trim(),
                   date: dateController.text.trim(),
                   time: timeController.text.trim(),
                   location: locationController.text.trim(),
                   docId: document.id,
                 );
-                if (success) {
-                  Get.snackbar(
-                    'Berhasil', 
-                    'Pengingat berhasil disimpan & disinkronkan ke Google Calendar!', 
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: Colors.green.withOpacity(0.9),
-                    colorText: Colors.white,
-                  );
+                if (result != null) {
+                  final isCalendarSyncOk = result['google_calendar_success'] ?? true;
+                  if (isCalendarSyncOk) {
+                    Get.snackbar(
+                      'Berhasil', 
+                      'Pengingat berhasil disimpan & disinkronkan ke Google Calendar!', 
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: Colors.green.withOpacity(0.9),
+                      colorText: Colors.white,
+                    );
+                  } else {
+                    Get.snackbar(
+                      'Penyimpanan Berhasil dengan Peringatan', 
+                      'Pengingat disimpan di sistem lokal, tetapi gagal disinkronkan ke Google Calendar Anda. Hubungkan ulang akun Google Anda untuk memperbarui izin.', 
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: Colors.orange.withOpacity(0.9),
+                      colorText: Colors.white,
+                      duration: const Duration(seconds: 5),
+                    );
+                  }
                 } else {
                   Get.snackbar('Gagal', 'Gagal membuat pengingat.', snackPosition: SnackPosition.BOTTOM);
                 }
@@ -435,6 +468,202 @@ class ArchiveDetailController extends GetxController {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: const Text('Simpan & Sinkron', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> suggestAndShowDispositionDialog(BuildContext context) async {
+    if (delegations.isEmpty) {
+      Get.snackbar('Disposisi', 'Belum ada divisi yang dibuat. Buat divisi di halaman Profil terlebih dahulu.',
+          backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
+      return;
+    }
+
+    isAnalyzingDisposition.value = true;
+    
+    // Show loading dialog
+    Get.dialog(
+      const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('AI sedang menganalisis tujuan disposisi...', style: TextStyle(fontWeight: FontWeight.w500)),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+
+    Map<String, dynamic>? res;
+    try {
+      // Get document full detail for full text content
+      final detail = await apiService.getDocumentDetail(document.id);
+      final contentText = detail?['content'] ?? document.summary;
+      
+      final delegationNames = delegations.map((d) => d['name'].toString()).toList();
+      res = await apiService.suggestDisposition(contentText, delegationNames);
+    } catch (e) {
+      print("Suggest disposition error: $e");
+    } finally {
+      isAnalyzingDisposition.value = false;
+    }
+    
+    Get.back(); // Close loading dialog
+
+    if (res != null) {
+      aiSuggestedDelegation.value = res['suggested_delegation'] ?? '';
+      aiSuggestedReason.value = res['reason'] ?? '';
+    } else {
+      aiSuggestedDelegation.value = '';
+      aiSuggestedReason.value = '';
+    }
+    
+    // Open disposition select dialog
+    String? selectedDelId;
+    if (aiSuggestedDelegation.value.isNotEmpty) {
+      final matchedDel = delegations.firstWhereOrNull((d) => d['name'] == aiSuggestedDelegation.value);
+      if (matchedDel != null) {
+        selectedDelId = matchedDel['_id'];
+      }
+    }
+
+    final selectedDelIdObs = selectedDelId.obs;
+
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            Icon(
+              aiSuggestedDelegation.value.isNotEmpty ? LucideIcons.sparkles : LucideIcons.send, 
+              color: aiSuggestedDelegation.value.isNotEmpty ? AppTheme.aiAccent : AppTheme.primary
+            ),
+            const SizedBox(width: 8),
+            Text(
+              aiSuggestedDelegation.value.isNotEmpty ? 'Rekomendasi Disposisi AI' : 'Disposisi Surat Manual', 
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (aiSuggestedDelegation.value.isNotEmpty) ...[
+                const Text('AI menyarankan surat ini didisposisikan ke divisi berikut:', style: TextStyle(fontSize: 12, color: AppTheme.outline)),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.aiSoft,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.aiAccent.withOpacity(0.2)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        aiSuggestedDelegation.value.toUpperCase(),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.aiAccent),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        aiSuggestedReason.value,
+                        style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant, height: 1.4),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                const Text(
+                  'Rekomendasi AI tidak tersedia. Silakan pilih divisi penerima secara manual untuk mendisposisikan surat ini:', 
+                  style: TextStyle(fontSize: 13, color: AppTheme.onSurfaceVariant, height: 1.4)
+                ),
+              ],
+              const SizedBox(height: 20),
+              const Text('Pilih Divisi Penerima Konfirmasi:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.onSurface)),
+              const SizedBox(height: 8),
+              Obx(() => DropdownButtonFormField<String>(
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                value: selectedDelIdObs.value,
+                hint: const Text('Pilih Divisi'),
+                items: [
+                  const DropdownMenuItem<String>(
+                    value: 'general',
+                    child: Text('General (Semua Tanpa Divisi)'),
+                  ),
+                  ...delegations.map((d) {
+                    return DropdownMenuItem<String>(
+                      value: d['_id'],
+                      child: Text(d['name'] ?? ''),
+                    );
+                  }).toList(),
+                ],
+                onChanged: (val) {
+                  selectedDelIdObs.value = val;
+                },
+              )),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (selectedDelIdObs.value == null) {
+                Get.snackbar('Error', 'Silakan pilih divisi penerima.', snackPosition: SnackPosition.BOTTOM);
+                return;
+              }
+              Get.back();
+              isLoading.value = true;
+              try {
+                final success = await apiService.dispositionDocument(document.id, selectedDelIdObs.value!);
+                if (success) {
+                  Get.snackbar(
+                    'Sukses Disposisi',
+                    'Surat berhasil didisposisikan ke divisi tujuan!',
+                    backgroundColor: Colors.green.withOpacity(0.9),
+                    colorText: Colors.white,
+                    snackPosition: SnackPosition.BOTTOM,
+                  );
+                  await fetchDetailedData(); // Refresh details page
+                } else {
+                  Get.snackbar('Gagal', 'Gagal memproses disposisi.', snackPosition: SnackPosition.BOTTOM);
+                }
+              } catch (e) {
+                print("Submit disposition error: $e");
+                Get.snackbar(
+                  'Error',
+                  'Terjadi kesalahan saat memproses disposisi: $e',
+                  backgroundColor: Colors.red.withOpacity(0.9),
+                  colorText: Colors.white,
+                  snackPosition: SnackPosition.BOTTOM,
+                );
+              } finally {
+                isLoading.value = false;
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Kirim ke Divisi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

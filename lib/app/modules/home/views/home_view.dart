@@ -97,7 +97,7 @@ class HomeView extends GetView<HomeController> {
         return InkWell(
           onTap: () {
             if (action['label'] == 'SCAN') {
-              controller.uploadDocument(true);
+              Get.toNamed(Routes.SCANNER);
             } else if (action['label'] == 'UPLOAD') {
               controller.uploadDocument(false);
             } else if (action['label'] == 'AMBAAI') {
@@ -239,21 +239,34 @@ class HomeView extends GetView<HomeController> {
                               ),
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: priorityColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              item.priority,
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: priorityColor,
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: priorityColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  item.priority,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: priorityColor,
+                                  ),
+                                ),
                               ),
-                            ),
+                              if (item.id != 'placeholder') ...[
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(LucideIcons.trash2, size: 16, color: Colors.redAccent),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  onPressed: () => controller.confirmDeleteReminder(item),
+                                ),
+                              ],
+                            ],
                           ),
                         ],
                       ),

@@ -1,7 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../data/services/api_service.dart';
 
@@ -15,6 +18,7 @@ class ProfileController extends GetxController {
   final email = ''.obs;
   final role = ''.obs;
   final orgName = ''.obs;
+  final inviteCode = ''.obs;
 
   // Google Drive state
   final isDriveConnected = false.obs;
@@ -40,6 +44,7 @@ class ProfileController extends GetxController {
       email.value = apiService.email.value ?? '';
       role.value = apiService.role.value ?? '';
       orgName.value = apiService.delegationName.value ?? 'Personal Workspace';
+      inviteCode.value = apiService.inviteCode.value ?? '';
 
       // 2. Load Google Drive Status from ApiService observable
       isDriveConnected.value = apiService.googleDriveConnected.value;
@@ -48,6 +53,7 @@ class ProfileController extends GetxController {
       if (apiService.isOwner) {
         final memberList = await apiService.getOrganizationMembers();
         members.assignAll(List<Map<String, dynamic>>.from(memberList));
+        await fetchDelegations();
       }
     } catch (e) {
       print("Fetch profile data error: $e");
@@ -207,7 +213,7 @@ class ProfileController extends GetxController {
       if (success) {
         Get.snackbar(
           'Password Diperbarui', 
-          'Password Anda berhasil diperbarui!', 
+          'Password Anda berhasil diperbarui.', 
           backgroundColor: Colors.green.withOpacity(0.1), 
           colorText: Colors.green,
           snackPosition: SnackPosition.BOTTOM
@@ -215,10 +221,9 @@ class ProfileController extends GetxController {
         oldPasswordController.clear();
         newPasswordController.clear();
         confirmPasswordController.clear();
-        Get.back(); // Go back to profile
       }
     } catch (e) {
-      print("Change password error: $e");
+      print("Update password error: $e");
     } finally {
       isLoading.value = false;
     }
@@ -270,5 +275,213 @@ class ProfileController extends GetxController {
   void toggleNotifyInsights(bool value) {
     notifyInsights.value = value;
     _storage.write('notifyInsights', value);
+  }
+
+  // --- Delegation Management ---
+  final delegations = <Map<String, dynamic>>[].obs;
+  final delegationNameController = TextEditingController();
+
+  Future<void> fetchDelegations() async {
+    try {
+      final list = await apiService.getDelegations();
+      delegations.assignAll(List<Map<String, dynamic>>.from(list));
+    } catch (e) {
+      print("Fetch delegations error: $e");
+    }
+  }
+
+  Future<void> createDelegation(String name) async {
+    if (name.trim().isEmpty) return;
+    isLoading.value = true;
+    try {
+      final success = await apiService.createDelegation(name);
+      if (success) {
+        Get.snackbar('Sukses', 'Delegasi "$name" berhasil dibuat.', 
+            backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green, snackPosition: SnackPosition.BOTTOM);
+        delegationNameController.clear();
+        await fetchDelegations();
+      } else {
+        Get.snackbar('Gagal', 'Gagal membuat delegasi.', 
+            backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red, snackPosition: SnackPosition.BOTTOM);
+      }
+    } catch (e) {
+      print("Create delegation error: $e");
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> renameDelegation(String id, String name) async {
+    if (name.trim().isEmpty) return;
+    isLoading.value = true;
+    try {
+      final success = await apiService.updateDelegation(id, name);
+      if (success) {
+        Get.snackbar('Sukses', 'Delegasi berhasil diubah nama menjadi "$name".', 
+            backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green, snackPosition: SnackPosition.BOTTOM);
+        await fetchDelegations();
+        await fetchProfileData();
+      } else {
+        Get.snackbar('Gagal', 'Gagal mengubah nama delegasi.', 
+            backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red, snackPosition: SnackPosition.BOTTOM);
+      }
+    } catch (e) {
+      print("Rename delegation error: $e");
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> deleteDelegation(String id) async {
+    isLoading.value = true;
+    try {
+      final success = await apiService.deleteDelegation(id);
+      if (success) {
+        Get.snackbar('Sukses', 'Delegasi berhasil dihapus dan semua anggota dialihkan ke general.', 
+            backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green, snackPosition: SnackPosition.BOTTOM);
+        await fetchDelegations();
+        await fetchProfileData();
+      } else {
+        Get.snackbar('Gagal', 'Gagal menghapus delegasi.', 
+            backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red, snackPosition: SnackPosition.BOTTOM);
+      }
+    } catch (e) {
+      print("Delete delegation error: $e");
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> moveMemberDelegation(String targetUserId, String newDelegationId) async {
+    isLoading.value = true;
+    try {
+      final success = await apiService.changeDelegation(targetUserId, newDelegationId);
+      if (success) {
+        Get.snackbar('Sukses', 'Anggota berhasil dipindahkan delegasi/divisi.', 
+            backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green, snackPosition: SnackPosition.BOTTOM);
+        await fetchProfileData(); // reload members list
+      } else {
+        Get.snackbar('Gagal', 'Gagal memindahkan anggota ke delegasi.', 
+            backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red, snackPosition: SnackPosition.BOTTOM);
+      }
+    } catch (e) {
+      print("Move member delegation error: $e");
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> moveMultipleMembersDelegation(List<String> targetUserIds, String newDelegationId) async {
+    isLoading.value = true;
+    try {
+      int successCount = 0;
+      for (final uid in targetUserIds) {
+        final success = await apiService.changeDelegation(uid, newDelegationId);
+        if (success) {
+          successCount++;
+        }
+      }
+      Get.snackbar(
+        'Batch Update Selesai', 
+        '$successCount dari ${targetUserIds.length} anggota berhasil dipindahkan.', 
+        backgroundColor: Colors.green.withOpacity(0.1), 
+        colorText: Colors.green, 
+        snackPosition: SnackPosition.BOTTOM
+      );
+      await fetchProfileData(); // reload members list
+    } catch (e) {
+      print("Move multiple members error: $e");
+      Get.snackbar('Error', 'Terjadi kesalahan saat memproses batch update: $e', snackPosition: SnackPosition.BOTTOM);
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // --- Asset Upload (Kop Surat & TTD Digital) ---
+  final isUploadingAsset = false.obs;
+  final _picker = ImagePicker();
+
+  Future<void> pickAndUploadAsset(String assetType) async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1200,
+      imageQuality: 85,
+    );
+    if (image == null) return;
+
+    final nameController = TextEditingController();
+    final nameResult = await Get.dialog<String>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(assetType == 'kop' ? 'Beri Nama Kop Surat' : 'Beri Nama TTD Digital', style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Masukkan nama/label untuk ${assetType == 'kop' ? "Kop Surat" : "Tanda Tangan"} ini agar dapat dipilih di dropdown.', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameController,
+              decoration: InputDecoration(
+                hintText: assetType == 'kop' ? 'Kop Utama, Kop Dinas, dll' : 'TTD Kepala, TTD Plt, dll',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: null),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              if (name.isNotEmpty) {
+                Get.back(result: name);
+              } else {
+                Get.snackbar('Input Error', 'Nama tidak boleh kosong', backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
+              }
+            },
+            child: const Text('Simpan & Upload', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple)),
+          ),
+        ],
+      )
+    );
+
+    if (nameResult == null || nameResult.isEmpty) return;
+
+    isUploadingAsset.value = true;
+    try {
+      final bytes = await File(image.path).readAsBytes();
+      final base64Image = base64Encode(bytes);
+      final delegId = apiService.delegationId.value ?? '';
+
+      final success = await apiService.uploadAsset(assetType, delegId, base64Image, nameResult);
+      if (success) {
+        Get.snackbar(
+          'Berhasil Diunggah',
+          'Aset "$nameResult" berhasil diperbarui.',
+          backgroundColor: Colors.green.withOpacity(0.1),
+          colorText: Colors.green,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      } else {
+        Get.snackbar(
+          'Gagal', 'Upload aset gagal. Silakan coba lagi.',
+          backgroundColor: Colors.red.withOpacity(0.1),
+          colorText: Colors.red,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } catch (e) {
+      print("Upload asset error: $e");
+      Get.snackbar('Error', 'Terjadi kesalahan: $e',
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      isUploadingAsset.value = false;
+    }
   }
 }

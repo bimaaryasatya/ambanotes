@@ -37,6 +37,18 @@ class ArchiveController extends GetxController {
           size: '1.2 MB',
         ));
       }
+      
+      // Inject dummy invitation document for testing Surat Tugas feature
+      parsed.insert(0, Document(
+        id: 'dummy_invitation_001',
+        title: 'Undangan Rapat Koordinasi Wilayah',
+        summary: 'Kami mengundang Bapak/Ibu untuk menghadiri rapat koordinasi wilayah pada hari Senin, 20 Oktober 2026 pukul 09:00 WIB bertempat di Ruang Rapat Utama Balai Kota Jakarta.',
+        status: 'processed',
+        type: 'Undangan',
+        archivedDate: DateTime.now().toIso8601String(),
+        size: '450 KB',
+      ));
+      
       documents.assignAll(parsed);
     } catch (e) {
       print("Fetch documents error: $e");
