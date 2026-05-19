@@ -1,45 +1,61 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+# https://dart.dev/guides/libraries/private-files
 
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# Flutter/Dart build and tool outputs
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
-/build/
-/coverage/
+build/
 
-# Symbolication related
-app.*.symbols
+# Android-specific build outputs and configurations
+android/local.properties
+android/.gradle/
+android/app/src/main/res/values/strings.xml
+.gradle/
+*.apk
+*.aar
+*.ap_
 
-# Obfuscation related
-app.*.map.json
+# iOS-specific build outputs
+ios/.generated/
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/
+ios/Pods/
+DerivedData/
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# Windows-specific build outputs
+windows/flutter/ephemeral/
+windows/CMakeLists.txt
+windows/runner/CMakeLists.txt
+
+# macOS-specific build outputs
+macos/Flutter/ephemeral/
+
+# Linux-specific build outputs
+linux/flutter/ephemeral/
+
+# IDE files (VS Code, IntelliJ/Android Studio, Eclipse)
+.idea/
+.vscode/
+*.iws
+*.iml
+*.ipr
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Log files and crash reports
+*.log
+*.crash
+
+# Operating System specific files
+.DS_Store
+Thumbs.db

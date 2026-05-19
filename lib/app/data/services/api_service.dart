@@ -274,6 +274,19 @@ class ApiService extends GetxService {
     return null;
   }
 
+  Future<bool> disconnectGoogleDrive() async {
+    try {
+      final response = await _post('/auth/google/disconnect', {});
+      if (response.statusCode == 200) {
+        googleDriveConnected.value = false;
+        return true;
+      }
+    } catch (e) {
+      print("Google disconnect error: $e");
+    }
+    return false;
+  }
+
   // --- Document Service Endpoints ---
 
   Future<Map<String, dynamic>?> uploadDocument(

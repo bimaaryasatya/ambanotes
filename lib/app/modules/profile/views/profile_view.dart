@@ -200,6 +200,43 @@ class ProfileView extends GetView<ProfileController> {
                 onPressed: migrating ? null : controller.migrateFiles,
               ),
             ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(LucideIcons.unlock, size: 16),
+                label: const Text("Putuskan Koneksi Google Drive", style: TextStyle(fontWeight: FontWeight.bold)),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.red),
+                  foregroundColor: Colors.red,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+                onPressed: () {
+                  Get.dialog(
+                    AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      title: const Text("Putuskan Google Drive?", style: TextStyle(fontWeight: FontWeight.bold)),
+                      content: const Text("Apakah Anda yakin ingin memutuskan integrasi Google Drive Anda? Akun akan dilepas dan sinkronisasi berkas otomatis akan dinonaktifkan."),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Get.back(),
+                          child: const Text("Batal", style: TextStyle(color: Colors.grey)),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Get.back();
+                            controller.disconnectDrive();
+                          },
+                          child: const Text("Putuskan", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
           ]
         ],
       ),

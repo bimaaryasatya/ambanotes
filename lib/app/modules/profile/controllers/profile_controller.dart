@@ -1,5 +1,7 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../data/services/api_service.dart';
 
 class ProfileController extends GetxController {
@@ -87,12 +89,55 @@ class ProfileController extends GetxController {
     try {
       final url = await apiService.getGoogleConnectUrl();
       if (url != null) {
-        print("Redirecting to OAuth URL: $url");
-        Get.snackbar('Google OAuth', 'Membuka portal otorisasi Google Drive...', backgroundColor: Colors.blue.withOpacity(0.1), colorText: Colors.blue);
-        isDriveConnected.value = true;
+        print("Google OAuth URL: $url");
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          Get.snackbar('Google OAuth', 'Membuka portal otorisasi Google Drive...', backgroundColor: Colors.blue.withOpacity(0.1), colorText: Colors.blue);
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          // Fallback ke Clipboard jika gagal membuka browser otomatis
+          await Clipboard.setData(ClipboardData(text: url));
+          Get.snackbar(
+            'Google OAuth', 
+            'Gagal membuka browser otomatis. Link otorisasi disalin ke clipboard! Tempel di browser Anda.', 
+            backgroundColor: Colors.blue.withOpacity(0.1), 
+            colorText: Colors.blue,
+            duration: const Duration(seconds: 8),
+            snackPosition: SnackPosition.BOTTOM
+          );
+        }
       }
     } catch (e) {
       print("Connect Google Drive error: $e");
+    }
+  }
+
+  Future<void> disconnectDrive() async {
+    isLoading.value = true;
+    try {
+      final success = await apiService.disconnectGoogleDrive();
+      if (success) {
+        isDriveConnected.value = false;
+        Get.snackbar(
+          'Google Drive', 
+          'Koneksi Google Drive berhasil diputuskan.', 
+          backgroundColor: Colors.green.withOpacity(0.1), 
+          colorText: Colors.green,
+          snackPosition: SnackPosition.BOTTOM
+        );
+      } else {
+        Get.snackbar(
+          'Error', 
+          'Gagal memutuskan koneksi Google Drive.', 
+          backgroundColor: Colors.red.withOpacity(0.1), 
+          colorText: Colors.red,
+          snackPosition: SnackPosition.BOTTOM
+        );
+      }
+    } catch (e) {
+      print("Disconnect Google Drive error: $e");
+    } finally {
+      isLoading.value = false;
     }
   }
 
@@ -101,12 +146,29 @@ class ProfileController extends GetxController {
     try {
       final data = await apiService.migrateToDrive();
       if (data != null) {
-        Get.snackbar('Migrasi Sukses', 'Semua berkas lokal berhasil dipindahkan ke Google Drive!', backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green);
+        final total = data['total_to_migrate'] ?? 0;
+        final success = data['migrated_count'] ?? 0;
+        final failed = data['failed_count'] ?? 0;
+
+        if (total == 0) {
+          Get.snackbar('Migrasi', 'Tidak ada berkas lokal baru yang perlu dipindahkan.', 
+              backgroundColor: Colors.blue.withOpacity(0.1), colorText: Colors.blue);
+        } else if (success == total) {
+          Get.snackbar('Migrasi Sukses', 'Semua berkas lokal ($success/$total) berhasil dipindahkan ke Google Drive!', 
+              backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green);
+        } else if (success > 0 && failed > 0) {
+          Get.snackbar('Migrasi Parsial', 'Berhasil memindahkan $success berkas, tetapi $failed berkas gagal dipindahkan.', 
+              backgroundColor: Colors.amber.withOpacity(0.1), colorText: Colors.amber);
+        } else {
+          Get.snackbar('Migrasi Gagal', 'Gagal memindahkan berkas. Semua dokumen ($failed) gagal diunggah.', 
+              backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
+        }
       } else {
         Get.snackbar('Migrasi Gagal', 'Gagal memindahkan berkas.', backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
       }
     } catch (e) {
       print("Migrate error: $e");
+      Get.snackbar('Migrasi Gagal', 'Terjadi kesalahan saat memindahkan berkas.', backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
     } finally {
       isMigrating.value = false;
     }
