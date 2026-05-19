@@ -5,13 +5,15 @@ import 'package:get_storage/get_storage.dart';
 import 'app/routes/app_pages.dart';
 import 'app/theme/app_theme.dart';
 import 'app/data/services/api_service.dart';
+import 'app/data/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
   
-  // Initialize ApiService globally
+  // Initialize Core Services globally
   Get.put(ApiService(), permanent: true);
+  Get.put(NotificationService(), permanent: true);
 
   // 1. Set system UI preferences
   SystemChrome.setPreferredOrientations([

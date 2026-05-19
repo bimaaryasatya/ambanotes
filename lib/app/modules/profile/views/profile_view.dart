@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../controllers/profile_controller.dart';
 import 'package:ambanotes/app/widgets/custom_bottom_navbar.dart';
+import 'security_view.dart';
+import 'notification_settings_view.dart';
 
 class ProfileView extends GetView<ProfileController> {
   const ProfileView({Key? key}) : super(key: key);
@@ -393,9 +395,17 @@ class ProfileView extends GetView<ProfileController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSettingsRow(LucideIcons.bell, "Pengaturan Notifikasi"),
+          _buildSettingsRow(
+            LucideIcons.bell, 
+            "Pengaturan Notifikasi",
+            onTap: () => Get.to(() => const NotificationSettingsView()),
+          ),
           const Divider(height: 24),
-          _buildSettingsRow(LucideIcons.shieldAlert, "Keamanan & Sandi"),
+          _buildSettingsRow(
+            LucideIcons.shieldAlert, 
+            "Keamanan & Sandi", 
+            onTap: () => Get.to(() => const SecurityView()),
+          ),
           const Divider(height: 24),
           _buildSettingsRow(LucideIcons.helpCircle, "Pusat Bantuan AmbaNotes"),
         ],
@@ -403,15 +413,19 @@ class ProfileView extends GetView<ProfileController> {
     );
   }
 
-  Widget _buildSettingsRow(IconData icon, String title) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: AppTheme.primary),
-        const SizedBox(width: 12),
-        Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.onSurface)),
-        const Spacer(),
-        const Icon(LucideIcons.chevronRight, size: 16, color: AppTheme.outlineVariant),
-      ],
+  Widget _buildSettingsRow(IconData icon, String title, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: AppTheme.primary),
+          const SizedBox(width: 12),
+          Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.onSurface)),
+          const Spacer(),
+          const Icon(LucideIcons.chevronRight, size: 16, color: AppTheme.outlineVariant),
+        ],
+      ),
     );
   }
 }

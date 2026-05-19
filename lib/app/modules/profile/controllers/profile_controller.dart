@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../data/services/api_service.dart';
 
@@ -26,6 +27,7 @@ class ProfileController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    loadNotificationSettings();
     fetchProfileData();
   }
 
@@ -177,5 +179,96 @@ class ProfileController extends GetxController {
   void logout() {
     apiService.logout();
     Get.offAllNamed('/login');
+  }
+
+  // --- Security & Account Management ---
+  final oldPasswordController = TextEditingController();
+  final newPasswordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
+
+  Future<void> updatePassword() async {
+    final oldPass = oldPasswordController.text;
+    final newPass = newPasswordController.text;
+    final confirmPass = confirmPasswordController.text;
+
+    if (oldPass.isEmpty || newPass.isEmpty || confirmPass.isEmpty) {
+      Get.snackbar('Input Error', 'Semua kolom password harus diisi.', backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
+      return;
+    }
+
+    if (newPass != confirmPass) {
+      Get.snackbar('Input Error', 'Konfirmasi password baru tidak cocok.', backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
+      return;
+    }
+
+    isLoading.value = true;
+    try {
+      final success = await apiService.changePassword(oldPass, newPass);
+      if (success) {
+        Get.snackbar(
+          'Password Diperbarui', 
+          'Password Anda berhasil diperbarui!', 
+          backgroundColor: Colors.green.withOpacity(0.1), 
+          colorText: Colors.green,
+          snackPosition: SnackPosition.BOTTOM
+        );
+        oldPasswordController.clear();
+        newPasswordController.clear();
+        confirmPasswordController.clear();
+        Get.back(); // Go back to profile
+      }
+    } catch (e) {
+      print("Change password error: $e");
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> removeAccount() async {
+    isLoading.value = true;
+    try {
+      final success = await apiService.deleteAccount();
+      if (success) {
+        Get.snackbar(
+          'Akun Dihapus', 
+          'Akun Anda telah berhasil dihapus selamanya.', 
+          backgroundColor: Colors.green.withOpacity(0.1), 
+          colorText: Colors.green,
+          snackPosition: SnackPosition.BOTTOM
+        );
+        logout();
+      }
+    } catch (e) {
+      print("Delete account error: $e");
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // --- Notification Preferences ---
+  final _storage = GetStorage();
+  final enableNotifications = true.obs;
+  final notifyProcessing = true.obs;
+  final notifyInsights = true.obs;
+
+  void loadNotificationSettings() {
+    enableNotifications.value = _storage.read('enableNotifications') ?? true;
+    notifyProcessing.value = _storage.read('notifyProcessing') ?? true;
+    notifyInsights.value = _storage.read('notifyInsights') ?? true;
+  }
+
+  void toggleNotifications(bool value) {
+    enableNotifications.value = value;
+    _storage.write('enableNotifications', value);
+  }
+
+  void toggleNotifyProcessing(bool value) {
+    notifyProcessing.value = value;
+    _storage.write('notifyProcessing', value);
+  }
+
+  void toggleNotifyInsights(bool value) {
+    notifyInsights.value = value;
+    _storage.write('notifyInsights', value);
   }
 }

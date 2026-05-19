@@ -6,7 +6,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../routes/app_pages.dart';
 import '../../../data/services/api_service.dart';
+import '../../../data/services/notification_service.dart';
 import '../../archive/controllers/archive_controller.dart';
+import '../../profile/controllers/profile_controller.dart';
 import '../../../theme/app_theme.dart';
 
 class HomeController extends GetxController {
@@ -172,6 +174,16 @@ class HomeController extends GetxController {
           fetchDashboardData();
           if (Get.isRegistered<ArchiveController>()) {
             Get.find<ArchiveController>().fetchDocuments();
+          }
+
+          if (Get.isRegistered<ProfileController>()) {
+            final profile = Get.find<ProfileController>();
+            if (profile.enableNotifications.value && profile.notifyProcessing.value) {
+              Get.find<NotificationService>().showNotification(
+                "Analisis AI Selesai",
+                "Dokumen '$filename' berhasil diekstrak dan siap diakses.",
+              );
+            }
           }
 
           Get.snackbar(

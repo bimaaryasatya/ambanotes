@@ -212,6 +212,65 @@ class ApiService extends GetxService {
     }
   }
 
+  Future<bool> changePassword(String oldPassword, String newPassword) async {
+    try {
+      final response = await _post('/auth/change-password', {
+        'old_password': oldPassword,
+        'new_password': newPassword,
+      });
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        String errMsg = response.body?['error'] ?? 'Gagal mengubah password.';
+        Get.snackbar(
+          'Gagal Mengubah',
+          errMsg,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.9),
+          colorText: Colors.white,
+        );
+        return false;
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Kesalahan Jaringan',
+        'Gagal menghubungi server: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.9),
+        colorText: Colors.white,
+      );
+      return false;
+    }
+  }
+
+  Future<bool> deleteAccount() async {
+    try {
+      final response = await _delete('/auth/delete-account');
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        String errMsg = response.body?['error'] ?? 'Gagal menghapus akun.';
+        Get.snackbar(
+          'Gagal Menghapus',
+          errMsg,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.9),
+          colorText: Colors.white,
+        );
+        return false;
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Kesalahan Jaringan',
+        'Gagal menghubungi server: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.9),
+        colorText: Colors.white,
+      );
+      return false;
+    }
+  }
+
   Future<bool> forgotPassword(String emailInput) async {
     try {
       final response = await _post('/auth/forgot-password', {
