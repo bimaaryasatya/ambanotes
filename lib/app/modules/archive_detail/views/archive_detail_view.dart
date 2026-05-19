@@ -19,15 +19,11 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
         actions: [
           IconButton(
             icon: const Icon(LucideIcons.download),
-            onPressed: () {
-              Get.snackbar('Download', 'Downloading document...', snackPosition: SnackPosition.BOTTOM);
-            },
+            onPressed: () => controller.downloadDocument(),
           ),
           IconButton(
             icon: const Icon(LucideIcons.share2),
-            onPressed: () {
-              Get.snackbar('Share', 'Sharing document...', snackPosition: SnackPosition.BOTTOM);
-            },
+            onPressed: () => controller.shareDocument(),
           ),
         ],
       ),
@@ -57,6 +53,35 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
                 _buildSecuritySuggestionCard(),
                 const SizedBox(height: 24),
                 _buildMetadataSection(),
+                Obx(() {
+                  final showReminder = controller.document.type.toLowerCase().contains('undangan') || 
+                                       controller.document.type.toLowerCase().contains('invitation') ||
+                                       controller.document.summary.toLowerCase().contains('rapat') || 
+                                       controller.document.summary.toLowerCase().contains('tanggal') || 
+                                       controller.document.summary.toLowerCase().contains('waktu');
+                  if (!showReminder) return const SizedBox.shrink();
+
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 16.0),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        onPressed: () => controller.showAddReminderDialog(context),
+                        icon: const Icon(LucideIcons.calendarPlus, color: Colors.white),
+                        label: const Text(
+                          'Tambahkan Pengingat ke Google Calendar',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.aiAccent,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 2,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
                 const SizedBox(height: 24),
                 _buildDocumentPreview(context),
                 if (controller.document.type.toLowerCase().contains('invitation') || 

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class ApiService extends GetxService {
@@ -186,9 +187,27 @@ class ApiService extends GetxService {
         'email': emailInput,
         'role': roleInput,
       });
-      return response.statusCode == 201;
+      if (response.statusCode == 201) {
+        return true;
+      } else {
+        String errMsg = response.body?['error'] ?? 'Gagal mengirim undangan.';
+        Get.snackbar(
+          'Gagal Mengirim',
+          errMsg,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.9),
+          colorText: Colors.white,
+        );
+        return false;
+      }
     } catch (e) {
-      print("Invite member error: $e");
+      Get.snackbar(
+        'Kesalahan Jaringan',
+        'Gagal menghubungi server: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.9),
+        colorText: Colors.white,
+      );
       return false;
     }
   }
@@ -464,11 +483,12 @@ class ApiService extends GetxService {
     return null;
   }
 
-  Future<String?> chat(String message, String context) async {
+  Future<String?> chat(String message, String context, {List<Map<String, dynamic>>? history}) async {
     try {
       final response = await _post('/ai/chat', {
         'message': message,
         'context': context,
+        'history': history ?? [],
       });
       if (response.statusCode == 200) {
         return response.body['answer'];
@@ -479,10 +499,11 @@ class ApiService extends GetxService {
     return null;
   }
 
-  Future<Map<String, dynamic>?> chatGlobal(String message) async {
+  Future<Map<String, dynamic>?> chatGlobal(String message, {List<Map<String, dynamic>>? history}) async {
     try {
       final response = await _post('/ai/chat-global', {
         'message': message,
+        'history': history ?? [],
       });
       if (response.statusCode == 200) {
         return response.body as Map<String, dynamic>;

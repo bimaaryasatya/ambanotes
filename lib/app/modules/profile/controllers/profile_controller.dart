@@ -76,7 +76,7 @@ class ProfileController extends GetxController {
         inviteEmailController.clear();
         fetchProfileData(); // reload members
       } else {
-        Get.snackbar('Error', 'Gagal mengirim undangan.', backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
+        print("Invitation failed, detailed snackbar shown by ApiService.");
       }
     } catch (e) {
       print("Invite member error: $e");

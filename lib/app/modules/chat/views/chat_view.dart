@@ -1,5 +1,6 @@
 import 'package:ambanotes/app/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../controllers/chat_controller.dart';
@@ -17,16 +18,83 @@ class ChatView extends GetView<ChatController> {
       backgroundColor: AppTheme.surface,
       bottomNavigationBar: const CustomBottomNavBar(currentIndex: 3),
       appBar: AppBar(
-        title: const Text("AmbaAI"),
+        title: const Text("Ask AmbaAI"),
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(LucideIcons.menu),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+            tooltip: "Buka Histori Chat",
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(LucideIcons.plusCircle, color: AppTheme.primary),
+            onPressed: () => controller.createNewSession(),
+            tooltip: "Mulai Chat Baru",
+          ),
+        ],
       ),
+      drawer: _buildHistoryDrawer(context),
       body: Column(
         children: [
-          _buildChatTabs(),
+          Obx(() {
+            final activeSession = controller.currentSession.value;
+            if (activeSession != null && activeSession.documentTitle != null) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                color: AppTheme.aiSoft.withOpacity(0.5),
+                child: Row(
+                  children: [
+                    const Icon(LucideIcons.fileText, size: 16, color: AppTheme.aiAccent),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Konteks Dokumen: ${activeSession.documentTitle}",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.aiAccent,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => controller.createNewSession(),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppTheme.aiAccent.withOpacity(0.3)),
+                        ),
+                        child: const Text(
+                          "Bersihkan",
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.aiAccent,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          }),
           Expanded(
             child: Obx(() {
               final msgs = controller.messages;
               final showTyping = controller.isTyping.value;
               final count = msgs.length + (showTyping ? 1 : 0);
+              
+              if (msgs.isEmpty && !showTyping) {
+                return _buildEmptyState();
+              }
               
               return ListView.builder(
                 padding: const EdgeInsets.all(20),
@@ -48,53 +116,213 @@ class ChatView extends GetView<ChatController> {
     );
   }
 
-  Widget _buildChatTabs() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-            bottom:
-                BorderSide(color: AppTheme.outlineVariant.withOpacity(0.3))),
-      ),
-      child: Row(
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Expanded(
-            child: Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Text("Chat",
-                    style: TextStyle(
-                        fontSize: 12,
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: const BoxDecoration(
+              color: AppTheme.aiSoft,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(LucideIcons.sparkles, size: 40, color: AppTheme.aiAccent),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            "Tanyakan apa saja kepada AmbaAI",
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.onSurface),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            "Mulai mengetik di bawah untuk memulai percakapan.",
+            style: TextStyle(fontSize: 13, color: AppTheme.outline),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryDrawer(BuildContext context) {
+    return Drawer(
+      backgroundColor: Colors.white,
+      child: Column(
+        children: [
+          // Drawer Header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
+            decoration: const BoxDecoration(
+              color: AppTheme.surface,
+              border: Border(
+                bottom: BorderSide(color: AppTheme.outlineVariant, width: 0.5),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: AppTheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(LucideIcons.sparkles, color: Colors.white, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      "AmbaAI Chat",
+                      style: TextStyle(
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.outline)),
+                        color: AppTheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  "Histori Percakapan Asisten AI",
+                  style: TextStyle(fontSize: 12, color: AppTheme.outline),
+                ),
+              ],
+            ),
+          ),
+
+          // New Chat Button inside Drawer
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(LucideIcons.plus, size: 16),
+                label: const Text(
+                  "Percakapan Baru",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 0,
+                ),
+                onPressed: () {
+                  Get.back(); // close drawer
+                  controller.createNewSession();
+                },
               ),
             ),
           ),
+
+          const Divider(height: 1),
+
+          // Chat History List
           Expanded(
-            child: Container(
-              decoration: const BoxDecoration(
-                border: Border(
-                    bottom: BorderSide(color: AppTheme.primary, width: 2)),
-              ),
-              child: const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(LucideIcons.sparkles,
-                          size: 16, color: AppTheme.aiAccent),
-                      SizedBox(width: 8),
-                      Text("Ask AmbaAI",
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.primary)),
-                    ],
+            child: Obx(() {
+              final activeSession = controller.currentSession.value;
+              final list = controller.sessions;
+              
+              if (list.isEmpty) {
+                return const Center(
+                  child: Text(
+                    "Belum ada histori.",
+                    style: TextStyle(fontSize: 13, color: AppTheme.outline),
                   ),
-                ),
-              ),
-            ),
+                );
+              }
+              
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: list.length,
+                itemBuilder: (context, index) {
+                  final session = list[index];
+                  final isSelected = activeSession?.id == session.id;
+                  final isContextual = session.documentTitle != null;
+                  
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppTheme.primary.withOpacity(0.08) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      leading: Icon(
+                        isContextual ? LucideIcons.sparkles : LucideIcons.messageSquare,
+                        size: 18,
+                        color: isSelected 
+                            ? AppTheme.primary 
+                            : (isContextual ? AppTheme.aiAccent : AppTheme.secondary),
+                      ),
+                      title: Text(
+                        session.title,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected ? AppTheme.primary : AppTheme.onSurface,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: isContextual
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 4.0),
+                              child: Row(
+                                children: [
+                                  const Icon(LucideIcons.fileText, size: 10, color: AppTheme.outline),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      session.documentTitle!,
+                                      style: const TextStyle(fontSize: 10, color: AppTheme.outline),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : null,
+                      trailing: IconButton(
+                        icon: const Icon(LucideIcons.trash2, size: 16, color: Colors.grey),
+                        onPressed: () {
+                          Get.dialog(
+                            AlertDialog(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              title: const Text("Hapus Chat?", style: TextStyle(fontWeight: FontWeight.bold)),
+                              content: const Text("Apakah Anda yakin ingin menghapus percakapan ini dari histori?"),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Get.back(),
+                                  child: const Text("Batal", style: TextStyle(color: Colors.grey)),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Get.back();
+                                    controller.deleteSession(session);
+                                  },
+                                  child: const Text("Hapus", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                      onTap: () {
+                        controller.selectSession(session);
+                        Get.back(); // close drawer
+                      },
+                    ),
+                  );
+                },
+              );
+            }),
           ),
         ],
       ),
@@ -150,12 +378,30 @@ class ChatView extends GetView<ChatController> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    msg.content,
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 1.5,
-                      color: isUser ? Colors.white : AppTheme.onSurface,
+                  MarkdownBody(
+                    data: msg.content,
+                    styleSheet: MarkdownStyleSheet(
+                      p: TextStyle(
+                        fontSize: 14,
+                        height: 1.5,
+                        color: isUser ? Colors.white : AppTheme.onSurface,
+                      ),
+                      strong: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isUser ? Colors.white : AppTheme.onSurface,
+                      ),
+                      em: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        color: isUser ? Colors.white : AppTheme.onSurface,
+                      ),
+                      listBullet: TextStyle(
+                        fontSize: 14,
+                        color: isUser ? Colors.white : AppTheme.onSurface,
+                      ),
+                      listBulletPadding: const EdgeInsets.only(right: 6, top: 3),
+                      h1: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isUser ? Colors.white : AppTheme.onSurface),
+                      h2: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isUser ? Colors.white : AppTheme.onSurface),
+                      h3: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: isUser ? Colors.white : AppTheme.onSurface),
                     ),
                   ),
                   if (!isUser && msg.references != null && msg.references!.isNotEmpty) ...[
@@ -306,7 +552,7 @@ class ChatView extends GetView<ChatController> {
                     child: TextField(
                       controller: textController,
                       decoration: const InputDecoration(
-                        hintText: "Ask AmbaAI anything...",
+                        hintText: "Tanyakan apa saja ke AmbaAI...",
                         border: InputBorder.none,
                         isCollapsed: true,
                       ),
