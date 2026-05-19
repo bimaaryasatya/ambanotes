@@ -1,6 +1,7 @@
 import 'package:ambanotes/app/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../controllers/profile_controller.dart';
@@ -668,36 +669,56 @@ class ProfileView extends GetView<ProfileController> {
                     size: 20, color: Colors.deepPurple),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Aset Organisasi",
+                    const Text("Aset Organisasi",
                         style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: AppTheme.onSurface)),
-                    Text("Upload kop surat & tanda tangan digital",
-                        style:
-                            TextStyle(fontSize: 11, color: AppTheme.outline)),
+                    Obx(() => Text(
+                        "${controller.assets.length} aset tersimpan",
+                        style: const TextStyle(
+                            fontSize: 11, color: AppTheme.outline))),
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text("Owner",
-                    style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.purple)),
-              ),
+              Obx(() => controller.assets.isNotEmpty
+                  ? InkWell(
+                      onTap: controller.toggleSelectionMode,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: controller.isSelectionMode.value
+                              ? Colors.red.withOpacity(0.1)
+                              : AppTheme.surfaceVariant,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: controller.isSelectionMode.value
+                                ? Colors.red.withOpacity(0.3)
+                                : AppTheme.outlineVariant.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Text(
+                          controller.isSelectionMode.value ? "Batal" : "Pilih",
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: controller.isSelectionMode.value
+                                  ? Colors.red
+                                  : AppTheme.primary),
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink()),
             ],
           ),
           const SizedBox(height: 20),
+          // Upload buttons
           Obx(
             () => controller.isUploadingAsset.value
                 ? const Center(
@@ -724,6 +745,351 @@ class ProfileView extends GetView<ProfileController> {
                       ),
                     ],
                   ),
+          ),
+          // Asset list with batch selection
+          Obx(() {
+            if (controller.assets.isEmpty) return const SizedBox.shrink();
+            final inSelection = controller.isSelectionMode.value;
+            return Column(
+              children: [
+                const SizedBox(height: 20),
+                const Divider(height: 1),
+                const SizedBox(height: 16),
+                // Select All row
+                if (inSelection) ...[
+                  InkWell(
+                    onTap: controller.selectAllAssets,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Obx(() => Checkbox(
+                                value: controller.selectedAssetIds.length ==
+                                    controller.assets.length,
+                                activeColor: AppTheme.primary,
+                                onChanged: (_) => controller.selectAllAssets(),
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                                visualDensity: VisualDensity.compact,
+                              )),
+                          const Text("Pilih Semua",
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.onSurface)),
+                          const Spacer(),
+                          Obx(() => Text(
+                                "${controller.selectedAssetIds.length} dipilih",
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppTheme.outline,
+                                    fontWeight: FontWeight.w500),
+                              )),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                // Asset items
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: controller.assets.length > 5
+                      ? 5
+                      : controller.assets.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 4),
+                  itemBuilder: (context, index) {
+                    final asset = controller.assets[index];
+                    return _buildAssetItemTile(asset, inSelection);
+                  },
+                ),
+                // Show more button
+                if (controller.assets.length > 5 && !inSelection) ...[
+                  const SizedBox(height: 8),
+                  Center(
+                    child: TextButton(
+                      onPressed: () => _showAllAssetsDialog(),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            "Lihat Selengkapnya (${controller.assets.length - 5} lainnya)",
+                            style: const TextStyle(
+                                color: AppTheme.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(LucideIcons.chevronRight,
+                              size: 16, color: AppTheme.primary),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                // Batch delete button
+                if (inSelection) ...[
+                  const SizedBox(height: 12),
+                  Obx(() => SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(LucideIcons.trash2, size: 16),
+                          label: Text(
+                            controller.selectedAssetIds.isEmpty
+                                ? "Pilih aset untuk dihapus"
+                                : "Hapus ${controller.selectedAssetIds.length} Aset",
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                controller.selectedAssetIds.isEmpty
+                                    ? Colors.grey[300]
+                                    : Colors.red,
+                            foregroundColor:
+                                controller.selectedAssetIds.isEmpty
+                                    ? Colors.grey
+                                    : Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16)),
+                            elevation: 0,
+                          ),
+                          onPressed: controller.selectedAssetIds.isEmpty
+                              ? null
+                              : controller.deleteSelectedAssets,
+                        ),
+                      )),
+                ],
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAssetItemTile(Map<String, dynamic> asset, bool inSelection) {
+    final String id = asset['id'] ?? '';
+    final String name = asset['name'] ?? 'Unnamed';
+    final String type = asset['asset_type'] ?? '';
+    final bool isKop = type == 'kop';
+    final Color color = isKop ? Colors.blue : Colors.teal;
+    final IconData icon = isKop ? LucideIcons.fileImage : LucideIcons.penTool;
+    final String label = isKop ? 'Kop Surat' : 'TTD Digital';
+
+    return Obx(() {
+      final isSelected = controller.selectedAssetIds.contains(id);
+      return InkWell(
+        onTap: inSelection
+            ? () => controller.toggleAssetSelection(id)
+            : () => _showAssetActionsDialog(asset),
+        onLongPress:
+            !inSelection ? () => controller.toggleSelectionMode() : null,
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppTheme.primary.withOpacity(0.08)
+                : color.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected
+                  ? AppTheme.primary.withOpacity(0.4)
+                  : color.withOpacity(0.15),
+              width: isSelected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              if (inSelection)
+                SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: Checkbox(
+                    value: isSelected,
+                    activeColor: AppTheme.primary,
+                    onChanged: (_) => controller.toggleAssetSelection(id),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 16, color: color),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name,
+                        style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.onSurface)),
+                    Text(label,
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: color,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+              if (!inSelection)
+                const Icon(LucideIcons.chevronRight,
+                    size: 14, color: AppTheme.outlineVariant),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  void _showAssetActionsDialog(Map<String, dynamic> asset) {
+    final String id = asset['id'] ?? '';
+    final String name = asset['name'] ?? '';
+    
+    Widget imagePreview;
+    try {
+      final String? fileUrl = asset['file_url'] ?? asset['url'] ?? asset['image_url'];
+      final String? b64 = asset['image_data'] ?? asset['file_data'] ?? asset['base64'];
+      
+      if (fileUrl != null && fileUrl.isNotEmpty) {
+        imagePreview = Image.network(fileUrl, height: 200, fit: BoxFit.contain);
+      } else if (b64 != null && b64.isNotEmpty) {
+        String cleanB64 = b64;
+        if (cleanB64.contains(',')) {
+          cleanB64 = cleanB64.split(',').last;
+        }
+        imagePreview = Image.memory(base64Decode(cleanB64), height: 200, fit: BoxFit.contain);
+      } else {
+        imagePreview = const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(LucideIcons.imageOff, size: 40, color: Colors.grey),
+              SizedBox(height: 12),
+              Text("Preview tidak tersedia", style: TextStyle(color: Colors.grey, fontSize: 13)),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      imagePreview = const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(LucideIcons.alertCircle, size: 40, color: Colors.red),
+            SizedBox(height: 12),
+            Text("Gagal memuat preview", style: TextStyle(color: Colors.red, fontSize: 13)),
+          ],
+        ),
+      );
+    }
+
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(name,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: double.maxFinite,
+                height: 220,
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                padding: const EdgeInsets.all(8),
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: imagePreview,
+                ),
+              ),
+            ListTile(
+              leading: const Icon(LucideIcons.edit2, color: AppTheme.primary),
+              title: const Text("Ubah Nama"),
+              onTap: () {
+                Get.back();
+                controller.updateAssetName(id, name);
+              },
+            ),
+            ListTile(
+              leading: const Icon(LucideIcons.image, color: Colors.teal),
+              title: const Text("Ganti Gambar"),
+              onTap: () {
+                Get.back();
+                controller.updateAssetImage(id, name);
+              },
+            ),
+            ListTile(
+              leading: const Icon(LucideIcons.trash2, color: Colors.red),
+              title: const Text("Hapus Aset",
+                  style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Get.back();
+                controller.deleteAsset(id, name);
+              },
+            ),
+          ],
+        ),
+        ),
+      ),
+    );
+  }
+
+  void _showAllAssetsDialog() {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(LucideIcons.stamp,
+                  size: 20, color: Colors.deepPurple),
+            ),
+            const SizedBox(width: 8),
+            const Text("Semua Aset",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        content: Container(
+          width: double.maxFinite,
+          constraints: const BoxConstraints(maxHeight: 450),
+          child: Obx(() => ListView.separated(
+                shrinkWrap: true,
+                itemCount: controller.assets.length,
+                separatorBuilder: (context, index) => const SizedBox(height: 4),
+                itemBuilder: (context, index) {
+                  final asset = controller.assets[index];
+                  return _buildAssetItemTile(asset, controller.isSelectionMode.value);
+                },
+              )),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text("Tutup", style: TextStyle(color: Colors.grey)),
           ),
         ],
       ),
@@ -825,25 +1191,45 @@ class ProfileView extends GetView<ProfileController> {
             children: [
               const Icon(LucideIcons.gitMerge, color: Colors.blue),
               const SizedBox(width: 8),
-              const Text("Kelola Delegasi / Divisi",
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.onSurface)),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                    color: AppTheme.surfaceVariant,
-                    borderRadius: BorderRadius.circular(12)),
-                child: Obx(() => Text(
-                      "${controller.delegations.length} Divisi",
-                      style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primary),
-                    )),
-              )
+              const Expanded(
+                child: Text("Kelola Delegasi / Divisi",
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.onSurface)),
+              ),
+              Obx(() => controller.delegations.isNotEmpty
+                  ? InkWell(
+                      onTap: controller.toggleDelegationSelectionMode,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: controller.isDelegationSelectionMode.value
+                              ? Colors.red.withOpacity(0.1)
+                              : AppTheme.surfaceVariant,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: controller.isDelegationSelectionMode.value
+                                ? Colors.red.withOpacity(0.3)
+                                : AppTheme.outlineVariant.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Text(
+                          controller.isDelegationSelectionMode.value
+                              ? "Batal"
+                              : "Pilih",
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: controller.isDelegationSelectionMode.value
+                                  ? Colors.red
+                                  : AppTheme.primary),
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink()),
             ],
           ),
           const SizedBox(height: 16),
@@ -882,181 +1268,298 @@ class ProfileView extends GetView<ProfileController> {
             ],
           ),
           const SizedBox(height: 20),
-          Obx(
-            () => controller.delegations.isEmpty
-                ? const Center(
+          Obx(() {
+            if (controller.delegations.isEmpty) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Text("Belum ada divisi terdaftar.",
+                      style:
+                          TextStyle(color: AppTheme.outline, fontSize: 13)),
+                ),
+              );
+            }
+            final inSelection = controller.isDelegationSelectionMode.value;
+            return Column(
+              children: [
+                // Select All row
+                if (inSelection) ...[
+                  InkWell(
+                    onTap: controller.selectAllDelegations,
+                    borderRadius: BorderRadius.circular(8),
                     child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 20),
-                      child: Text("Belum ada divisi terdaftar.",
-                          style:
-                              TextStyle(color: AppTheme.outline, fontSize: 13)),
-                    ),
-                  )
-                : Column(
-                    children: [
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: controller.delegations.length > 5
-                            ? 5
-                            : controller.delegations.length,
-                        separatorBuilder: (context, index) =>
-                            const Divider(height: 20),
-                        itemBuilder: (context, index) {
-                          final d = controller.delegations[index];
-                          return _buildDelegationRow(context, d);
-                        },
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Obx(() => Checkbox(
+                                value:
+                                    controller.selectedDelegationIds.length ==
+                                        controller.delegations.length,
+                                activeColor: AppTheme.primary,
+                                onChanged: (_) =>
+                                    controller.selectAllDelegations(),
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                                visualDensity: VisualDensity.compact,
+                              )),
+                          const Text("Pilih Semua",
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.onSurface)),
+                          const Spacer(),
+                          Obx(() => Text(
+                                "${controller.selectedDelegationIds.length} dipilih",
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppTheme.outline,
+                                    fontWeight: FontWeight.w500),
+                              )),
+                        ],
                       ),
-                      if (controller.delegations.length > 5) ...[
-                        const SizedBox(height: 12),
-                        Center(
-                          child: TextButton(
-                            onPressed: () => _showAllDivisionsDialog(context),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text("Lihat Semua Divisi",
-                                    style: TextStyle(
-                                        color: AppTheme.primary,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13)),
-                                SizedBox(width: 4),
-                                Icon(LucideIcons.chevronRight,
-                                    size: 16, color: AppTheme.primary),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
-          ),
+                  const SizedBox(height: 8),
+                ],
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: controller.delegations.length > 5
+                      ? 5
+                      : controller.delegations.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final d = controller.delegations[index];
+                    return _buildDelegationRow(context, d, inSelection);
+                  },
+                ),
+                if (controller.delegations.length > 5 && !inSelection) ...[
+                  const SizedBox(height: 12),
+                  Center(
+                    child: TextButton(
+                      onPressed: () => _showAllDivisionsDialog(context),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text("Lihat Semua Divisi",
+                              style: TextStyle(
+                                  color: AppTheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13)),
+                          SizedBox(width: 4),
+                          Icon(LucideIcons.chevronRight,
+                              size: 16, color: AppTheme.primary),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                // Batch delete button
+                if (inSelection) ...[
+                  const SizedBox(height: 16),
+                  Obx(() => SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(LucideIcons.trash2, size: 16),
+                          label: Text(
+                            controller.selectedDelegationIds.isEmpty
+                                ? "Pilih divisi untuk dihapus"
+                                : "Hapus ${controller.selectedDelegationIds.length} Divisi",
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                controller.selectedDelegationIds.isEmpty
+                                    ? Colors.grey[300]
+                                    : Colors.red,
+                            foregroundColor:
+                                controller.selectedDelegationIds.isEmpty
+                                    ? Colors.grey
+                                    : Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16)),
+                            elevation: 0,
+                          ),
+                          onPressed: controller.selectedDelegationIds.isEmpty
+                              ? null
+                              : controller.deleteSelectedDelegations,
+                        ),
+                      )),
+                ],
+              ],
+            );
+          }),
         ],
       ),
     );
   }
 
-  Widget _buildDelegationRow(BuildContext context, Map<String, dynamic> d) {
+  Widget _buildDelegationRow(
+      BuildContext context, Map<String, dynamic> d, bool inSelection) {
     final String name = d['name'] ?? '';
     final String id = d['_id'] ?? '';
-    return InkWell(
-      onTap: () {
-        _showDivisionMembersDialog(context, name, id);
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                  color: AppTheme.surfaceVariant, shape: BoxShape.circle),
-              child: const Icon(LucideIcons.gitBranch,
-                  size: 18, color: AppTheme.primary),
+
+    return Obx(() {
+      final isSelected = controller.selectedDelegationIds.contains(id);
+      return InkWell(
+        onTap: inSelection
+            ? () => controller.toggleDelegationSelection(id)
+            : () => _showDivisionMembersDialog(context, name, id),
+        onLongPress: !inSelection
+            ? () => controller.toggleDelegationSelectionMode()
+            : null,
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppTheme.primary.withOpacity(0.08)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected
+                  ? AppTheme.primary.withOpacity(0.4)
+                  : Colors.transparent,
+              width: isSelected ? 1.5 : 1,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name,
-                      style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.onSurface)),
-                  const SizedBox(height: 2),
-                  Obx(() {
-                    final count = controller.members
-                        .where((m) =>
-                            m['delegation_id'] == id && m['role'] != 'owner')
-                        .length;
-                    return Text("$count Anggota",
-                        style: const TextStyle(
-                            fontSize: 11, color: AppTheme.outline));
-                  }),
-                ],
+          ),
+          child: Row(
+            children: [
+              if (inSelection)
+                Checkbox(
+                  value: isSelected,
+                  activeColor: AppTheme.primary,
+                  onChanged: (_) =>
+                      controller.toggleDelegationSelection(id),
+                  materialTapTargetSize:
+                      MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                ),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                    color: AppTheme.surfaceVariant,
+                    shape: BoxShape.circle),
+                child: const Icon(LucideIcons.gitBranch,
+                    size: 18, color: AppTheme.primary),
               ),
-            ),
-            IconButton(
-              icon: const Icon(LucideIcons.edit2,
-                  size: 18, color: AppTheme.outline),
-              onPressed: () {
-                final editController = TextEditingController(text: name);
-                Get.dialog(
-                  AlertDialog(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20)),
-                    title: const Text("Ubah Nama Divisi",
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    content: TextField(
-                      controller: editController,
-                      decoration: InputDecoration(
-                        labelText: "Nama Divisi",
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name,
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.onSurface)),
+                    const SizedBox(height: 2),
+                    Obx(() {
+                      final count = controller.members
+                          .where((m) =>
+                              m['delegation_id'] == id &&
+                              m['role'] != 'owner')
+                          .length;
+                      return Text("$count Anggota",
+                          style: const TextStyle(
+                              fontSize: 11, color: AppTheme.outline));
+                    }),
+                  ],
+                ),
+              ),
+              if (!inSelection) ...[
+                IconButton(
+                  icon: const Icon(LucideIcons.edit2,
+                      size: 18, color: AppTheme.outline),
+                  onPressed: () {
+                    final editController =
+                        TextEditingController(text: name);
+                    Get.dialog(
+                      AlertDialog(
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20)),
+                        title: const Text("Ubah Nama Divisi",
+                            style:
+                                TextStyle(fontWeight: FontWeight.bold)),
+                        content: TextField(
+                          controller: editController,
+                          decoration: InputDecoration(
+                            labelText: "Nama Divisi",
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.circular(12)),
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Get.back(),
+                            child: const Text("Batal",
+                                style: TextStyle(color: Colors.grey)),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              final newName =
+                                  editController.text.trim();
+                              if (newName.isNotEmpty) {
+                                Get.back();
+                                controller.renameDelegation(
+                                    id, newName);
+                              }
+                            },
+                            child: const Text("Simpan",
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.primary)),
+                          ),
+                        ],
                       ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Get.back(),
-                        child: const Text("Batal",
-                            style: TextStyle(color: Colors.grey)),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(LucideIcons.trash2,
+                      size: 18, color: Colors.red),
+                  onPressed: () {
+                    Get.dialog(
+                      AlertDialog(
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20)),
+                        title: const Text("Hapus Divisi?",
+                            style:
+                                TextStyle(fontWeight: FontWeight.bold)),
+                        content: Text(
+                            "Apakah Anda yakin ingin menghapus divisi '$name'? Semua anggota di dalam divisi ini akan dipindahkan ke General (tanpa divisi)."),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Get.back(),
+                            child: const Text("Batal",
+                                style: TextStyle(color: Colors.grey)),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Get.back();
+                              controller.deleteDelegation(id);
+                            },
+                            child: const Text("Hapus",
+                                style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ],
                       ),
-                      TextButton(
-                        onPressed: () {
-                          final newName = editController.text.trim();
-                          if (newName.isNotEmpty) {
-                            Get.back();
-                            controller.renameDelegation(id, newName);
-                          }
-                        },
-                        child: const Text("Simpan",
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.primary)),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-            IconButton(
-              icon: const Icon(LucideIcons.trash2, size: 18, color: Colors.red),
-              onPressed: () {
-                Get.dialog(
-                  AlertDialog(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20)),
-                    title: const Text("Hapus Divisi?",
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    content: Text(
-                        "Apakah Anda yakin ingin menghapus divisi '$name'? Semua anggota di dalam divisi ini akan dipindahkan ke General (tanpa divisi)."),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Get.back(),
-                        child: const Text("Batal",
-                            style: TextStyle(color: Colors.grey)),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Get.back();
-                          controller.deleteDelegation(id);
-                        },
-                        child: const Text("Hapus",
-                            style: TextStyle(
-                                color: Colors.red,
-                                fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ],
+                    );
+                  },
+                ),
+              ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   void _showAllDivisionsDialog(BuildContext context) {
@@ -1080,7 +1583,7 @@ class ProfileView extends GetView<ProfileController> {
                 separatorBuilder: (context, index) => const Divider(height: 20),
                 itemBuilder: (context, index) {
                   final d = controller.delegations[index];
-                  return _buildDelegationRow(context, d);
+                  return _buildDelegationRow(context, d, false);
                 },
               )),
         ),
