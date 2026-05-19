@@ -30,6 +30,7 @@ class ProfileView extends GetView<ProfileController> {
           return const Center(child: CircularProgressIndicator());
         }
         return SingleChildScrollView(
+          primary: true,
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

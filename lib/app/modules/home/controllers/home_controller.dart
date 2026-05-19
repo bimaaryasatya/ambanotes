@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:ambanotes/app/data/models/models.dart';
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:google_mlkit_document_scanner/google_mlkit_document_scanner.dart';
 import '../../../routes/app_pages.dart';
 import '../../../data/services/api_service.dart';
 import '../../../data/services/notification_service.dart';
@@ -25,6 +25,7 @@ class HomeController extends GetxController {
     fetchDashboardData();
   }
 
+  // ... (keeping fetchDashboardData intact)
   Future<void> fetchDashboardData() async {
     isLoading.value = true;
     try {
@@ -105,11 +106,22 @@ class HomeController extends GetxController {
       String? filename;
 
       if (fromCamera) {
-        final picker = ImagePicker();
-        final pickedFile = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
-        if (pickedFile != null) {
-          bytes = await pickedFile.readAsBytes();
-          filename = pickedFile.name;
+        final options = DocumentScannerOptions(
+          documentFormat: DocumentFormat.jpeg,
+          mode: ScannerMode.full,
+          pageLimit: 1,
+          isGalleryImport: true,
+        );
+        final documentScanner = DocumentScanner(options: options);
+        final result = await documentScanner.scanDocument();
+        
+        if (result.images.isNotEmpty) {
+          final imagePath = result.images.first;
+          final file = File(imagePath);
+          bytes = await file.readAsBytes();
+          filename = imagePath.split('/').last;
+        } else {
+          return; // User canceled scan
         }
       } else {
         final result = await FilePicker.platform.pickFiles(

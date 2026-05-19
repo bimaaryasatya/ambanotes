@@ -97,7 +97,7 @@ class HomeView extends GetView<HomeController> {
         return InkWell(
           onTap: () {
             if (action['label'] == 'SCAN') {
-              Get.toNamed(Routes.SCANNER);
+              controller.uploadDocument(true);
             } else if (action['label'] == 'UPLOAD') {
               controller.uploadDocument(false);
             } else if (action['label'] == 'AMBAAI') {
