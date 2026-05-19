@@ -33,13 +33,13 @@ class HomeView extends GetView<HomeController> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              "Good Morning, Sarah",
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                    fontSize: 24,
-                    color: AppTheme.onSurface,
-                  ),
-            ),
+            Obx(() => Text(
+                  "Good Morning, ${controller.apiService.username.value ?? 'User'}",
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                        fontSize: 24,
+                        color: AppTheme.onSurface,
+                      ),
+                )),
             const SizedBox(height: 20),
             _buildSearchBar(),
             const SizedBox(height: 24),
@@ -96,7 +96,11 @@ class HomeView extends GetView<HomeController> {
 
         return InkWell(
           onTap: () {
-            if (action['label'] == 'AMBAAI') {
+            if (action['label'] == 'SCAN') {
+              controller.uploadDocument(true);
+            } else if (action['label'] == 'UPLOAD') {
+              controller.uploadDocument(false);
+            } else if (action['label'] == 'AMBAAI') {
               Get.offAllNamed(Routes.CHAT);
             } else if (action['label'] == 'ARCHIVE') {
               Get.offAllNamed(Routes.ARCHIVE);

@@ -1,75 +1,236 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:ambanotes/app/data/models/models.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import '../../../routes/app_pages.dart';
+import '../../../data/services/api_service.dart';
+import '../../archive/controllers/archive_controller.dart';
+import '../../../theme/app_theme.dart';
 
 class HomeController extends GetxController {
+  final apiService = Get.find<ApiService>();
+
   final agenda = <AgendaItem>[].obs;
   final documents = <Document>[].obs;
+  final isLoading = false.obs;
+  final isUploading = false.obs;
 
   @override
   void onInit() {
     super.onInit();
-    loadMockData();
+    fetchDashboardData();
   }
 
-  void loadMockData() {
-    agenda.assignAll([
-      AgendaItem(
-        id: '1',
-        title: 'Invitations to attend',
-        startTime: '09:00 AM',
-        endTime: '10:30 AM',
-        location: 'Main Conference Room',
-        priority: 'HIGH',
-      ),
-      AgendaItem(
-        id: '2',
-        title: 'Meeting with Director',
-        startTime: '11:00 AM',
-        endTime: '12:00 PM',
-        location: "Director's Office",
-        priority: 'NORMAL',
-      ),
-      AgendaItem(
-        id: '3',
-        title: 'Contract Expiry - Level 4',
-        startTime: '02:00 PM',
-        endTime: '03:00 PM',
-        location: 'Secretariat File #402',
-        priority: 'REVIEW',
-      ),
-    ]);
+  Future<void> fetchDashboardData() async {
+    isLoading.value = true;
+    try {
+      // 1. Fetch real reminders
+      final remindersList = await apiService.listReminders();
+      final List<AgendaItem> parsedAgenda = [];
+      
+      for (var item in remindersList) {
+        final task = item['task'] ?? 'No Task';
+        
+        // Super smart AI priority computation based on keywords
+        String priority = 'NORMAL';
+        final lowerTask = task.toLowerCase();
+        if (lowerTask.contains('penting') || lowerTask.contains('segera') || lowerTask.contains('rapat') || lowerTask.contains('urgent')) {
+          priority = 'HIGH';
+        } else if (lowerTask.contains('evaluasi') || lowerTask.contains('kontrak') || lowerTask.contains('review')) {
+          priority = 'REVIEW';
+        }
 
-    documents.assignAll([
-      Document(
-        id: 'doc1',
-        title: 'Annual Performance Review 2023',
-        summary:
-            'Summary of departmental KPIs and individual contributor evaluations for the fiscal year.',
-        status: 'Archived',
-        type: 'Report',
-        archivedDate: 'Oct 12, 2023',
-        size: '2.4 MB',
-      ),
-      Document(
-        id: 'doc2',
-        title: 'Lease Agreement - Downtown Office',
-        summary:
-            '5-year commercial lease terms detailing maintenance responsibilities and rent escalation clauses.',
-        status: 'Approved',
-        type: 'Contract',
-        archivedDate: 'Sep 05, 2023',
-        size: '1.8 MB',
-      ),
-      Document(
-        id: 'doc3',
-        title: 'Gala Invitation Letter Draft',
-        summary:
-            'Initial wording for the charity gala invites targeting VIP stakeholders and local officials.',
-        status: 'Draft',
-        type: 'Invitation',
-        archivedDate: 'Aug 22, 2023',
-        size: '0.5 MB',
-      ),
-    ]);
+        final time = item['time'] != null && item['time'].toString().isNotEmpty 
+            ? item['time'] 
+            : '09:00 AM';
+        
+        parsedAgenda.add(AgendaItem(
+          id: item['_id'] ?? '',
+          title: task,
+          startTime: time,
+          endTime: item['date'] ?? 'Today',
+          location: item['location'] != null && item['location'].toString().isNotEmpty 
+              ? item['location'] 
+              : 'Secretariat Office',
+          priority: priority,
+        ));
+      }
+
+      if (parsedAgenda.isEmpty) {
+        // Fallback placeholder if empty
+        agenda.assignAll([
+          AgendaItem(
+            id: 'placeholder',
+            title: 'Welcome to AmbaNotes! Try scanning a letter to extract tasks.',
+            startTime: 'Now',
+            endTime: 'Today',
+            location: 'Secretariat Office',
+            priority: 'NORMAL',
+          )
+        ]);
+      } else {
+        agenda.assignAll(parsedAgenda);
+      }
+
+      // 2. Fetch real documents list
+      final docsList = await apiService.listDocuments();
+      final List<Document> parsedDocs = [];
+      for (var item in docsList) {
+        final classification = item['classification'] ?? {};
+        parsedDocs.add(Document(
+          id: item['doc_id'] ?? '',
+          title: item['filename'] ?? 'Untitled Doc',
+          summary: item['content'] ?? 'No text extracted.',
+          status: item['status'] ?? 'processed',
+          type: classification['label_name'] ?? 'Letter',
+          archivedDate: item['uploaded_at'] ?? 'Unknown',
+          size: '1.2 MB',
+        ));
+      }
+      documents.assignAll(parsedDocs);
+    } catch (e) {
+      print("Fetch dashboard data error: $e");
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> uploadDocument(bool fromCamera) async {
+    try {
+      List<int>? bytes;
+      String? filename;
+
+      if (fromCamera) {
+        final picker = ImagePicker();
+        final pickedFile = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+        if (pickedFile != null) {
+          bytes = await pickedFile.readAsBytes();
+          filename = pickedFile.name;
+        }
+      } else {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+        );
+        if (result != null && result.files.single.path != null) {
+          final file = File(result.files.single.path!);
+          bytes = await file.readAsBytes();
+          filename = result.files.single.name;
+        }
+      }
+
+      if (bytes == null || filename == null) return;
+
+      final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+      final tempDoc = Document(
+        id: tempId,
+        title: filename,
+        summary: 'Dokumen sedang diproses di server oleh pipeline AI...',
+        status: 'processing',
+        type: 'Processing',
+        archivedDate: 'Sedang diproses',
+        size: '...',
+      );
+
+      // Insert into local documents list
+      documents.insert(0, tempDoc);
+
+      // If ArchiveController is active, insert it there too so the user sees it in the document list!
+      if (Get.isRegistered<ArchiveController>()) {
+        final archiveCtrl = Get.find<ArchiveController>();
+        archiveCtrl.documents.insert(0, tempDoc);
+      }
+
+      // Show beautiful non-blocking snackbar notifying the user
+      Get.snackbar(
+        "Mengunggah Dokumen",
+        "Dokumen '$filename' sedang diproses di latar belakang. Anda bisa mengecek statusnya di tab Files.",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppTheme.primary.withOpacity(0.9),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+        mainButton: TextButton(
+          onPressed: () {
+            Get.offAllNamed(Routes.ARCHIVE);
+          },
+          child: const Text("LIHAT FILES", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        ),
+      );
+
+      // Start the background upload job asynchronously (non-blocking!)
+      apiService.uploadDocument(bytes, filename).then((result) {
+        // Remove the temporary placeholder
+        documents.removeWhere((doc) => doc.id == tempId);
+        if (Get.isRegistered<ArchiveController>()) {
+          Get.find<ArchiveController>().documents.removeWhere((doc) => doc.id == tempId);
+        }
+
+        if (result != null) {
+          // Trigger a silent refresh so both controllers get fully populated updated states
+          fetchDashboardData();
+          if (Get.isRegistered<ArchiveController>()) {
+            Get.find<ArchiveController>().fetchDocuments();
+          }
+
+          Get.snackbar(
+            "Dokumen Selesai Diproses",
+            "Analisis AI selesai untuk '$filename'!",
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green.withOpacity(0.9),
+            colorText: Colors.white,
+            duration: const Duration(seconds: 5),
+            mainButton: TextButton(
+              onPressed: () {
+                final classification = result['classification'] ?? {};
+                final completedDoc = Document(
+                  id: result['doc_id'] ?? 'unknown',
+                  title: result['filename'] ?? filename!,
+                  summary: result['content'] ?? 'No text extracted.',
+                  status: result['status'] ?? 'processed',
+                  type: classification['label_name'] ?? 'Letter',
+                  archivedDate: result['uploaded_at'] ?? 'Just now',
+                  size: '1.2 MB',
+                );
+                Get.toNamed(Routes.ARCHIVE_DETAIL, arguments: completedDoc);
+              },
+              child: const Text("BUKA DETAIL", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          );
+        } else {
+          Get.snackbar(
+            "Upload Gagal",
+            "Gagal memproses dokumen '$filename'.",
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red.withOpacity(0.9),
+            colorText: Colors.white,
+          );
+        }
+      }).catchError((err) {
+        // Cleanup placeholders on error
+        documents.removeWhere((doc) => doc.id == tempId);
+        if (Get.isRegistered<ArchiveController>()) {
+          Get.find<ArchiveController>().documents.removeWhere((doc) => doc.id == tempId);
+        }
+
+        Get.snackbar(
+          "Error Ingesti",
+          "Terjadi kesalahan saat memproses '$filename': $err",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.9),
+          colorText: Colors.white,
+        );
+      });
+
+    } catch (e) {
+      Get.snackbar(
+        "Error",
+        "Gagal menyiapkan upload: $e",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.9),
+        colorText: Colors.white,
+      );
+    }
   }
 }

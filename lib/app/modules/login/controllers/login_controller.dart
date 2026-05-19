@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../routes/app_pages.dart';
+import '../../../data/services/api_service.dart';
 
 class LoginController extends GetxController {
+  final apiService = Get.find<ApiService>();
+
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final isPasswordVisible = false.obs;
@@ -18,18 +21,19 @@ class LoginController extends GetxController {
         "Error",
         "Please fill in all fields",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withValues(alpha: 0.1),
+        backgroundColor: Colors.red.withOpacity(0.1),
         colorText: Colors.red,
       );
       return;
     }
 
     isLoading.value = true;
-    // Mock login delay
-    await Future.delayed(const Duration(seconds: 1));
+    final success = await apiService.login(emailController.text, passwordController.text);
     isLoading.value = false;
 
-    Get.offAllNamed(Routes.HOME);
+    if (success) {
+      Get.offAllNamed(Routes.HOME);
+    }
   }
 
   void goToRegister() {

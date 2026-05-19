@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:ambanotes/app/data/models/models.dart';
-import 'package:ambanotes/app/modules/archive/controllers/archive_controller.dart';
 import 'package:intl/intl.dart';
+import '../../../data/services/api_service.dart';
 
 class AssignmentFormController extends GetxController {
+  final apiService = Get.find<ApiService>();
   final formKey = GlobalKey<FormState>();
 
   final letterNumberController = TextEditingController();
@@ -14,6 +14,10 @@ class AssignmentFormController extends GetxController {
   final selectedTime = Rx<TimeOfDay?>(null);
   
   final selectedKopSurat = 'Kop Utama Institusi'.obs;
+  final sourceDocumentTitle = 'Undangan'.obs;
+  final isLoading = false.obs;
+  
+  String docId = 'unknown';
 
   final List<String> kopSuratOptions = [
     'Kop Utama Institusi',
@@ -22,24 +26,15 @@ class AssignmentFormController extends GetxController {
     'Kop Kepanitiaan Acara',
   ];
 
-  late Document sourceDocument;
-
   @override
   void onInit() {
     super.onInit();
     final args = Get.arguments;
-    if (args != null && args is Document) {
-      sourceDocument = args;
-    } else {
-      sourceDocument = Document(
-        id: 'unknown',
-        title: 'Unknown',
-        summary: '',
-        status: 'Draft',
-        type: 'Invitation',
-        archivedDate: DateFormat('MMM dd, yyyy').format(DateTime.now()),
-        size: '0 KB',
-      );
+    if (args != null && args is Map<String, dynamic>) {
+      docId = args['doc_id'] ?? 'unknown';
+      letterNumberController.text = args['nomor_surat'] ?? '';
+      locationController.text = args['organisasi'] ?? '';
+      sourceDocumentTitle.value = args['title'] ?? args['perihal'] ?? 'Undangan';
     }
   }
 
@@ -73,7 +68,7 @@ class AssignmentFormController extends GetxController {
     ? '${selectedTime.value!.hour.toString().padLeft(2, '0')}:${selectedTime.value!.minute.toString().padLeft(2, '0')} WIB' 
     : 'Pilih Waktu';
 
-  void submitForm() {
+  void submitForm() async {
     FocusManager.instance.primaryFocus?.unfocus();
     if (formKey.currentState!.validate()) {
       if (selectedDate.value == null || selectedTime.value == null) {
@@ -85,54 +80,39 @@ class AssignmentFormController extends GetxController {
       final timeStr = formattedTime;
       final location = locationController.text;
       final letterNo = letterNumberController.text;
-      final kop = selectedKopSurat.value;
+      
+      // Default to delegation name if member, otherwise owner chooses from dropdown
+      final kop = apiService.isOwner ? selectedKopSurat.value : (apiService.delegationName.value ?? 'Kop Utama Institusi');
 
-      final htmlTemplate = '''
-<div style="font-family: sans-serif; padding: 20px;">
-  <div style="text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px;">
-    <h2>$kop</h2>
-    <p>Surat Jalan / Tugas</p>
-  </div>
-  <p><strong>Nomor:</strong> $letterNo</p>
-  <p><strong>Tanggal Terbit:</strong> ${DateFormat('dd MMMM yyyy').format(DateTime.now())}</p>
-  <br>
-  <p>Berdasarkan undangan referensi <strong>"${sourceDocument.title}"</strong>, maka dengan ini menugaskan nama-nama terlampir untuk hadir pada:</p>
-  <ul>
-    <li><strong>Tanggal:</strong> $dateStr</li>
-    <li><strong>Waktu:</strong> $timeStr</li>
-    <li><strong>Tempat:</strong> $location</li>
-  </ul>
-  <br>
-  <p>Demikian surat tugas ini dibuat agar dapat dilaksanakan dengan penuh tanggung jawab.</p>
-</div>
-''';
-
-      final newDoc = Document(
-        id: 'st_${DateTime.now().millisecondsSinceEpoch}',
-        title: 'Surat Tugas: $location',
-        summary: htmlTemplate,
-        status: 'Draft',
-        type: 'Surat Tugas',
-        archivedDate: DateFormat('MMM dd, yyyy').format(DateTime.now()),
-        size: '1.2 MB',
+      isLoading.value = true;
+      final result = await apiService.generateSuratTugas(
+        referenceDocId: docId,
+        letterNumber: letterNo,
+        date: dateStr,
+        time: timeStr,
+        location: location,
+        kop: kop,
       );
+      isLoading.value = false;
 
-      try {
-        final archiveCtrl = Get.find<ArchiveController>();
-        archiveCtrl.documents.insert(0, newDoc);
-      } catch (e) {
-        print("ArchiveController not found in memory");
+      if (result != null) {
+        Get.back(); // go back to details
+        Get.snackbar(
+          'Sukses', 
+          'Surat tugas berhasil dibuat dan didaftarkan ke sistem.', 
+          backgroundColor: Colors.green.withOpacity(0.1), 
+          colorText: Colors.green,
+          snackPosition: SnackPosition.BOTTOM
+        );
+      } else {
+        Get.snackbar(
+          'Error', 
+          'Gagal mendaftarkan surat tugas ke server.', 
+          backgroundColor: Colors.red.withOpacity(0.1), 
+          colorText: Colors.red,
+          snackPosition: SnackPosition.BOTTOM
+        );
       }
-
-      Get.back(); // go back to details
-      Get.back(); // go back to archive
-      Get.snackbar(
-        'Sukses', 
-        'Surat tugas berhasil dibuat dan disimpan.', 
-        backgroundColor: Colors.green.withOpacity(0.1), 
-        colorText: Colors.green,
-        snackPosition: SnackPosition.BOTTOM
-      );
     }
   }
 }

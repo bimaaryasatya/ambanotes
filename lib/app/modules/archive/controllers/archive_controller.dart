@@ -1,61 +1,74 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:ambanotes/app/data/models/models.dart';
-import 'package:ambanotes/app/modules/home/controllers/home_controller.dart';
+import '../../../data/services/api_service.dart';
 
 class ArchiveController extends GetxController {
+  final apiService = Get.find<ApiService>();
+
   final documents = <Document>[].obs;
+  final isLoading = false.obs;
   
   final searchQuery = ''.obs;
   final selectedCategory = 'All Documents'.obs;
-  // Options: 'date_desc', 'date_asc', 'title_asc', 'title_desc'
   final sortOrder = 'date_desc'.obs; 
+  final isSemanticSearchEnabled = false.obs;
 
   @override
   void onInit() {
     super.onInit();
-    // In a real app we might fetch from a repository, here we link to HomeController's data
-    final homeController = Get.isRegistered<HomeController>() 
-        ? Get.find<HomeController>() 
-        : Get.put(HomeController());
-    // Clone the list to allow local modifications without immediately affecting home unless desired
-    documents.assignAll(homeController.documents.map((d) => Document(
-      id: d.id,
-      title: d.title,
-      summary: d.summary,
-      status: d.status,
-      type: d.type,
-      archivedDate: d.archivedDate,
-      size: d.size,
-    )).toList());
+    fetchDocuments();
+  }
+
+  Future<void> fetchDocuments() async {
+    isLoading.value = true;
+    try {
+      final docList = await apiService.listDocuments();
+      final List<Document> parsed = [];
+      for (var item in docList) {
+        final classification = item['classification'] ?? {};
+        parsed.add(Document(
+          id: item['doc_id'] ?? '',
+          title: item['filename'] ?? 'Untitled Doc',
+          summary: item['content'] ?? 'No text extracted.',
+          status: item['status'] ?? 'processed',
+          type: classification['label_name'] ?? 'Letter',
+          archivedDate: item['uploaded_at'] ?? 'Unknown',
+          size: '1.2 MB',
+        ));
+      }
+      documents.assignAll(parsed);
+    } catch (e) {
+      print("Fetch documents error: $e");
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   List<Document> get filteredDocuments {
     var result = documents.toList();
 
-    // 1. Filter by Search Query
+    // 1. Filter by Category
+    if (selectedCategory.value != 'All Documents') {
+      String targetType = '';
+      switch (selectedCategory.value) {
+        case 'Letters': targetType = 'surat_masuk'; break;
+        case 'Invitations': targetType = 'undangan'; break;
+        case 'Contracts': targetType = 'kontrak'; break;
+        case 'Reports': targetType = 'laporan'; break;
+      }
+      if (targetType.isNotEmpty) {
+        result = result.where((doc) => doc.type.toLowerCase() == targetType || doc.type.toLowerCase().contains(selectedCategory.value.substring(0, selectedCategory.value.length - 1).toLowerCase())).toList();
+      }
+    }
+
+    // 2. Filter by Search Query
     if (searchQuery.value.isNotEmpty) {
       final query = searchQuery.value.toLowerCase();
       result = result.where((doc) {
         return doc.title.toLowerCase().contains(query) || 
                doc.summary.toLowerCase().contains(query);
       }).toList();
-    }
-
-    // 2. Filter by Category
-    if (selectedCategory.value != 'All Documents') {
-      // Map 'Letters', 'Invitations', 'Contracts', 'Reports' to doc.type
-      // Assuming doc.type is like 'letter', 'contract', 'report' etc.
-      String targetType = '';
-      switch (selectedCategory.value) {
-        case 'Letters': targetType = 'letter'; break;
-        case 'Invitations': targetType = 'invitation'; break;
-        case 'Contracts': targetType = 'contract'; break;
-        case 'Reports': targetType = 'report'; break;
-      }
-      if (targetType.isNotEmpty) {
-        result = result.where((doc) => doc.type.toLowerCase() == targetType).toList();
-      }
     }
 
     // 3. Sort
@@ -65,10 +78,8 @@ class ArchiveController extends GetxController {
       } else if (sortOrder.value == 'title_desc') {
         return b.title.compareTo(a.title);
       } else if (sortOrder.value == 'date_asc') {
-        // Dummy date sort based on string
         return a.archivedDate.compareTo(b.archivedDate);
       } else {
-        // default 'date_desc'
         return b.archivedDate.compareTo(a.archivedDate);
       }
     });
@@ -78,6 +89,51 @@ class ArchiveController extends GetxController {
 
   void updateSearchQuery(String value) {
     searchQuery.value = value;
+  }
+
+  Future<void> performSemanticSearch() async {
+    if (searchQuery.value.isEmpty) {
+      fetchDocuments();
+      return;
+    }
+
+    isLoading.value = true;
+    try {
+      final results = await apiService.semanticSearch(searchQuery.value);
+      final List<Document> matchedDocs = [];
+      
+      // Match semantic search results (which return doc_id and filename) with our local detailed documents
+      for (var item in results) {
+        final docId = item['doc_id'];
+        final match = documents.firstWhereOrNull((d) => d.id == docId);
+        if (match != null) {
+          matchedDocs.add(match);
+        }
+      }
+      
+      if (matchedDocs.isNotEmpty) {
+        documents.assignAll(matchedDocs);
+        Get.snackbar(
+          'Semantic Search',
+          'Found ${matchedDocs.length} conceptually relevant documents!',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.deepPurple.withOpacity(0.8),
+          colorText: Colors.white,
+        );
+      } else {
+        Get.snackbar(
+          'Semantic Search',
+          'No conceptually matching documents found.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange.withOpacity(0.8),
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      print("Semantic search error: $e");
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   void selectCategory(String category) {
@@ -94,39 +150,64 @@ class ArchiveController extends GetxController {
 
   // --- ACTIONS ---
 
-  void deleteDocument(Document doc) {
-    documents.removeWhere((element) => element.id == doc.id);
-    Get.snackbar(
-      'Document Deleted',
-      '${doc.title} has been removed.',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.redAccent.withOpacity(0.8),
-      colorText: Colors.white,
-      margin: const EdgeInsets.all(16),
+  void deleteDocument(Document doc) async {
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('Confirm Delete'),
+        content: Text('Are you sure you want to delete ${doc.title}?'),
+        actions: [
+          TextButton(onPressed: () => Get.back(result: false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Get.back(result: true), 
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      )
     );
+
+    if (confirmed == true) {
+      isLoading.value = true;
+      final success = await apiService.deleteDocument(doc.id);
+      isLoading.value = false;
+
+      if (success) {
+        documents.removeWhere((element) => element.id == doc.id);
+        Get.snackbar(
+          'Document Deleted',
+          '${doc.title} has been removed successfully.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.redAccent.withOpacity(0.8),
+          colorText: Colors.white,
+        );
+      } else {
+        Get.snackbar(
+          'Deletion Failed',
+          'Could not delete document. Ensure you are an organization Owner.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange.withOpacity(0.8),
+          colorText: Colors.white,
+        );
+      }
+    }
   }
 
   void replaceDocument(Document doc) {
-    // Dummy replace logic
     Get.snackbar(
-      'Document Replaced',
-      '${doc.title} has been replaced successfully.',
+      'Replace Feature',
+      'Please upload a new scan or edit the document details directly.',
       snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green.withOpacity(0.8),
+      backgroundColor: Colors.blue.withOpacity(0.8),
       colorText: Colors.white,
-      margin: const EdgeInsets.all(16),
     );
   }
 
   void editDocument(Document doc) {
-    // Dummy edit logic
     Get.snackbar(
       'Edit Mode',
-      'Entering edit mode for ${doc.title}.',
+      'Feature details editing is handled inside document details screen.',
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Colors.blue.withOpacity(0.8),
       colorText: Colors.white,
-      margin: const EdgeInsets.all(16),
     );
   }
 }

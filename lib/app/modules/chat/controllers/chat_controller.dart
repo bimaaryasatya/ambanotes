@@ -1,22 +1,29 @@
 import 'package:get/get.dart';
+import '../../../data/services/api_service.dart';
 
 class ChatMessage {
   final String id;
   final String sender;
   final String content;
   final DateTime timestamp;
+  final List<dynamic>? references; // List of {'doc_id': ..., 'filename': ...}
 
   ChatMessage({
     required this.id,
     required this.sender,
     required this.content,
     required this.timestamp,
+    this.references,
   });
 }
 
 class ChatController extends GetxController {
+  final apiService = Get.find<ApiService>();
   final messages = <ChatMessage>[].obs;
   final isTyping = false.obs;
+
+  String? documentContextText;
+  String? documentTitle;
 
   @override
   void onInit() {
@@ -29,13 +36,15 @@ class ChatController extends GetxController {
     final args = Get.arguments;
     if (args != null && args is Map<String, dynamic>) {
       if (args['context'] == 'document') {
-        final title = args['documentTitle'];
+        documentTitle = args['documentTitle'];
+        documentContextText = args['documentSummary'];
+        
         // Provide an intro message from AI about the document
         Future.delayed(const Duration(milliseconds: 500), () {
           messages.add(ChatMessage(
             id: DateTime.now().toString(),
             sender: 'ai',
-            content: "I see you are viewing the document '$title'. What would you like to know about it?",
+            content: "I see you are viewing the document '$documentTitle'. Ask me anything about it!",
             timestamp: DateTime.now(),
           ));
         });
@@ -44,23 +53,18 @@ class ChatController extends GetxController {
   }
 
   void loadWelcomeMessages() {
+    if (Get.arguments != null) return; // Don't show generic welcome on contextual document chat
     messages.assignAll([
       ChatMessage(
-        id: '1',
-        sender: 'user',
-        content: 'Can you summarize the Q3 Secretariat Report and highlight any expiring contracts?',
-        timestamp: DateTime.now(),
-      ),
-      ChatMessage(
-        id: '2',
+        id: 'welcome_ai',
         sender: 'ai',
-        content: "I've reviewed the Q3 Secretariat Report. Budget utilization is at 82%, and you have a vendor agreement with AlphaCorp expiring in 12 days.",
+        content: "Halo! Saya adalah AmbaAI, asisten sekretariat Anda. Anda bisa menanyakan apa saja mengenai arsip surat dan dokumen organisasi Anda. Coba tanyakan: 'Apakah ada kontrak yang hampir habis?' atau 'Tolong carikan surat tugas untuk dinas luar negeri.'",
         timestamp: DateTime.now(),
       ),
     ]);
   }
 
-  void sendMessage(String content) {
+  void sendMessage(String content) async {
     if (content.trim().isEmpty) return;
     
     final userMsg = ChatMessage(
@@ -71,17 +75,42 @@ class ChatController extends GetxController {
     );
     messages.add(userMsg);
     
-    // AI Response simulation
     isTyping.value = true;
-    Future.delayed(const Duration(seconds: 1), () {
-      final aiMsg = ChatMessage(
-        id: DateTime.now().toString(),
-        sender: 'ai',
-        content: "I've analyzed your request. I found two documents matching your query in the Q3 reports. Would you like me to summarize them?",
-        timestamp: DateTime.now(),
-      );
-      messages.add(aiMsg);
+    try {
+      if (documentContextText != null) {
+        final answer = await apiService.chat(content, documentContextText!);
+        isTyping.value = false;
+        messages.add(ChatMessage(
+          id: DateTime.now().toString(),
+          sender: 'ai',
+          content: answer ?? 'Maaf, saya tidak dapat menganalisis dokumen ini sekarang.',
+          timestamp: DateTime.now(),
+        ));
+      } else {
+        final response = await apiService.chatGlobal(content);
+        isTyping.value = false;
+        if (response != null) {
+          final answer = response['answer'] ?? "No response.";
+          final refs = response['references'] as List<dynamic>?;
+          messages.add(ChatMessage(
+            id: DateTime.now().toString(),
+            sender: 'ai',
+            content: answer,
+            timestamp: DateTime.now(),
+            references: refs,
+          ));
+        } else {
+          messages.add(ChatMessage(
+            id: DateTime.now().toString(),
+            sender: 'ai',
+            content: 'Error menghubungi server. Silakan coba lagi.',
+            timestamp: DateTime.now(),
+          ));
+        }
+      }
+    } catch (e) {
       isTyping.value = false;
-    });
+      print("Chat error: $e");
+    }
   }
 }

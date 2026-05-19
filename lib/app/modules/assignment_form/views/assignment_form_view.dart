@@ -14,64 +14,76 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
       appBar: AppBar(
         title: const Text('Buat Surat Tugas'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: controller.formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildReferenceCard(),
-              const SizedBox(height: 24),
-              const Text('Detail Surat', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.onSurface)),
-              const SizedBox(height: 16),
-              _buildDropdown(),
-              const SizedBox(height: 16),
-              _buildTextField(
-                label: 'Nomor Surat',
-                controller: controller.letterNumberController,
-                icon: LucideIcons.hash,
-                validator: (val) => val == null || val.isEmpty ? 'Nomor surat wajib diisi' : null,
-              ),
-              const SizedBox(height: 16),
-              _buildDateTimeField(
-                label: 'Tanggal Penugasan',
-                displayValue: () => controller.formattedDate,
-                icon: LucideIcons.calendar,
-                onTap: () => controller.pickDate(context),
-              ),
-              const SizedBox(height: 16),
-              _buildDateTimeField(
-                label: 'Waktu Penugasan',
-                displayValue: () => controller.formattedTime,
-                icon: LucideIcons.clock,
-                onTap: () => controller.pickTime(context),
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                label: 'Tempat / Lokasi',
-                controller: controller.locationController,
-                icon: LucideIcons.mapPin,
-                validator: (val) => val == null || val.isEmpty ? 'Tempat wajib diisi' : null,
-              ),
-              const SizedBox(height: 40),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton.icon(
-                  onPressed: controller.submitForm,
-                  icon: const Icon(LucideIcons.checkCircle, color: Colors.white),
-                  label: const Text(
-                    'Konfirmasi Surat Jalan',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
+      body: SafeArea(
+        bottom: true,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Form(
+            key: controller.formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildReferenceCard(),
+                const SizedBox(height: 24),
+                const Text('Detail Surat', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.onSurface)),
+                const SizedBox(height: 16),
+                Obx(() => controller.apiService.isOwner 
+                  ? Column(
+                      children: [
+                        _buildDropdown(),
+                        const SizedBox(height: 16),
+                      ],
+                    )
+                  : const SizedBox.shrink()
                 ),
-              ),
-            ],
+                _buildTextField(
+                  label: 'Nomor Surat',
+                  controller: controller.letterNumberController,
+                  icon: LucideIcons.hash,
+                  validator: (val) => val == null || val.isEmpty ? 'Nomor surat wajib diisi' : null,
+                ),
+                const SizedBox(height: 16),
+                _buildDateTimeField(
+                  label: 'Tanggal Penugasan',
+                  displayValue: () => controller.formattedDate,
+                  icon: LucideIcons.calendar,
+                  onTap: () => controller.pickDate(context),
+                ),
+                const SizedBox(height: 16),
+                _buildDateTimeField(
+                  label: 'Waktu Penugasan',
+                  displayValue: () => controller.formattedTime,
+                  icon: LucideIcons.clock,
+                  onTap: () => controller.pickTime(context),
+                ),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  label: 'Tempat / Lokasi',
+                  controller: controller.locationController,
+                  icon: LucideIcons.mapPin,
+                  validator: (val) => val == null || val.isEmpty ? 'Tempat wajib diisi' : null,
+                ),
+                const SizedBox(height: 40),
+                Obx(() => SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton.icon(
+                    onPressed: controller.isLoading.value ? null : controller.submitForm,
+                    icon: controller.isLoading.value 
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Icon(LucideIcons.checkCircle, color: Colors.white),
+                    label: Text(
+                      controller.isLoading.value ? 'Memproses...' : 'Konfirmasi Surat Jalan',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                )),
+              ],
+            ),
           ),
         ),
       ),
@@ -95,10 +107,10 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('Referensi Undangan', style: TextStyle(fontSize: 12, color: AppTheme.outline)),
-                Text(
-                  controller.sourceDocument.title,
+                Obx(() => Text(
+                  controller.sourceDocumentTitle.value,
                   style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary),
-                ),
+                )),
               ],
             ),
           )
@@ -108,7 +120,7 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
   }
 
   Widget _buildDropdown() {
-    return DropdownButtonFormField<String>(
+    return Obx(() => DropdownButtonFormField<String>(
       decoration: InputDecoration(
         labelText: 'Kop Surat',
         prefixIcon: const Icon(LucideIcons.building, color: AppTheme.outline),
@@ -122,7 +134,7 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
       onChanged: (val) {
         if (val != null) controller.selectedKopSurat.value = val;
       },
-    );
+    ));
   }
 
   Widget _buildTextField({

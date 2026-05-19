@@ -64,6 +64,18 @@ class ArchiveView extends GetView<ArchiveController> {
             ),
           ),
           GestureDetector(
+            onTap: controller.performSemanticSearch,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                color: AppTheme.aiSoft.withOpacity(0.8),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(LucideIcons.sparkles, size: 18, color: AppTheme.aiAccent),
+            ),
+          ),
+          GestureDetector(
             onTap: controller.toggleSort,
             child: Container(
               padding: const EdgeInsets.all(8),
@@ -136,12 +148,17 @@ class ArchiveView extends GetView<ArchiveController> {
   }
 
   Widget _buildDocumentItem(Document doc) {
+    final isProcessing = doc.status == 'processing';
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.2)),
+        border: Border.all(
+          color: isProcessing 
+              ? AppTheme.primary.withOpacity(0.3) 
+              : AppTheme.outlineVariant.withOpacity(0.2)
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.02),
@@ -153,7 +170,9 @@ class ArchiveView extends GetView<ArchiveController> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => Get.toNamed(Routes.ARCHIVE_DETAIL, arguments: doc),
+          onTap: isProcessing 
+              ? () => Get.snackbar('Sedang Diproses', 'Dokumen sedang dianalisis oleh AI di latar belakang. Silakan tunggu.', snackPosition: SnackPosition.BOTTOM)
+              : () => Get.toNamed(Routes.ARCHIVE_DETAIL, arguments: doc),
           borderRadius: BorderRadius.circular(24),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -164,140 +183,199 @@ class ArchiveView extends GetView<ArchiveController> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: AppTheme.surface,
+                    color: isProcessing ? AppTheme.primary.withOpacity(0.05) : AppTheme.surface,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(LucideIcons.fileText, color: AppTheme.secondary),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        doc.title,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.onSurface,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppTheme.outlineVariant.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        doc.type.toUpperCase(),
-                        style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppTheme.outline),
-                      ),
-                    ),
-                  ],
+                  child: isProcessing 
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: Padding(
+                            padding: EdgeInsets.all(14.0),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
+                          ),
+                        )
+                      : const Icon(LucideIcons.fileText, color: AppTheme.secondary),
                 ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.aiSoft.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTheme.aiAccent.withOpacity(0.1)),
-                  ),
-                  child: Row(
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(LucideIcons.sparkles, size: 12, color: AppTheme.aiAccent),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          doc.summary,
-                          style: const TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariant, fontStyle: FontStyle.italic),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              doc.title,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.onSurface,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isProcessing 
+                                  ? AppTheme.primary.withOpacity(0.1) 
+                                  : AppTheme.outlineVariant.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              isProcessing ? 'PROCESSING' : doc.type.toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 8, 
+                                fontWeight: FontWeight.bold, 
+                                color: isProcessing ? AppTheme.primary : AppTheme.outline
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: isProcessing 
+                              ? AppTheme.primary.withOpacity(0.05) 
+                              : AppTheme.aiSoft.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isProcessing 
+                                ? AppTheme.primary.withOpacity(0.1) 
+                                : AppTheme.aiAccent.withOpacity(0.1)
+                          ),
                         ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              isProcessing ? LucideIcons.loader : LucideIcons.sparkles, 
+                              size: 12, 
+                              color: isProcessing ? AppTheme.primary : AppTheme.aiAccent
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                doc.summary,
+                                style: TextStyle(
+                                  fontSize: 11, 
+                                  color: isProcessing ? AppTheme.primary : AppTheme.onSurfaceVariant, 
+                                  fontStyle: FontStyle.italic
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                _buildStatusBadge(doc.status),
+                                Text(
+                                  doc.archivedDate,
+                                  style: const TextStyle(
+                                    fontSize: 10, 
+                                    color: AppTheme.outline, 
+                                    fontWeight: FontWeight.w500
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (!isProcessing)
+                            PopupMenuButton<String>(
+                              icon: const Icon(LucideIcons.moreVertical, size: 18, color: AppTheme.outline),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onSelected: (value) {
+                                if (value == 'delete') {
+                                  controller.deleteDocument(doc);
+                                } else if (value == 'edit') {
+                                  controller.editDocument(doc);
+                                } else if (value == 'replace') {
+                                  controller.replaceDocument(doc);
+                                }
+                              },
+                              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                                const PopupMenuItem<String>(
+                                  value: 'edit',
+                                  child: Text('Edit'),
+                                ),
+                                const PopupMenuItem<String>(
+                                  value: 'replace',
+                                  child: Text('Replace'),
+                                ),
+                                const PopupMenuItem<String>(
+                                  value: 'delete',
+                                  child: Text('Delete', style: TextStyle(color: Colors.red)),
+                                ),
+                              ],
+                            ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        _buildStatusBadge(doc.status),
-                        const SizedBox(width: 12),
-                        Text(
-                          doc.archivedDate,
-                          style: const TextStyle(fontSize: 10, color: AppTheme.outline, fontWeight: FontWeight.w500),
-                        ),
-                      ],
-                    ),
-                    PopupMenuButton<String>(
-                      icon: const Icon(LucideIcons.moreVertical, size: 18, color: AppTheme.outline),
-                      onSelected: (value) {
-                        if (value == 'delete') {
-                          controller.deleteDocument(doc);
-                        } else if (value == 'edit') {
-                          controller.editDocument(doc);
-                        } else if (value == 'replace') {
-                          controller.replaceDocument(doc);
-                        }
-                      },
-                      itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                        const PopupMenuItem<String>(
-                          value: 'edit',
-                          child: Text('Edit'),
-                        ),
-                        const PopupMenuItem<String>(
-                          value: 'replace',
-                          child: Text('Replace'),
-                        ),
-                        const PopupMenuItem<String>(
-                          value: 'delete',
-                          child: Text('Delete', style: TextStyle(color: Colors.red)),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
-        ],
-      ),
-      ),
-      ),
+        ),
       ),
     );
   }
 
   Widget _buildStatusBadge(String status) {
     final isApproved = status == 'Approved';
+    final isProcessing = status == 'processing';
+    
+    Color badgeColor = AppTheme.secondaryContainer.withOpacity(0.3);
+    Color textColor = AppTheme.onSecondaryContainer;
+    Widget? icon;
+    
+    if (isApproved) {
+      badgeColor = Colors.green.withOpacity(0.1);
+      textColor = Colors.green;
+      icon = const Icon(LucideIcons.checkCircle, size: 10, color: Colors.green);
+    } else if (isProcessing) {
+      badgeColor = AppTheme.primary.withOpacity(0.1);
+      textColor = AppTheme.primary;
+      icon = const Icon(LucideIcons.hourglass, size: 10, color: AppTheme.primary);
+    }
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: isApproved ? Colors.green.withOpacity(0.1) : AppTheme.secondaryContainer.withOpacity(0.3),
+        color: badgeColor,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (isApproved) ...[
-            const Icon(LucideIcons.checkCircle, size: 10, color: Colors.green),
+          if (icon != null) ...[
+            icon,
             const SizedBox(width: 4),
           ],
           Text(
-            status,
+            isProcessing ? 'Processing' : status,
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.bold,
-              color: isApproved ? Colors.green : AppTheme.onSecondaryContainer,
+              color: textColor,
             ),
           ),
         ],

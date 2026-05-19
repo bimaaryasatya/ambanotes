@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../routes/app_pages.dart';
+import '../../../data/services/api_service.dart';
 
 enum RegisterStep { userInfo, organizationSetup }
 
 class RegisterController extends GetxController {
+  final apiService = Get.find<ApiService>();
+
   // Step 1 controllers
   final usernameController = TextEditingController();
   final emailController = TextEditingController();
@@ -73,11 +76,21 @@ class RegisterController extends GetxController {
     }
 
     isLoading.value = true;
-    // Mock registration delay
-    await Future.delayed(const Duration(seconds: 1));
+    final action = setupOption.value == 'organization' ? 'create_org' : 'join_org';
+    final orgName = setupOption.value == 'organization' ? organizationNameController.text : null;
+
+    final success = await apiService.register(
+      usernameInput: usernameController.text.trim(),
+      emailInput: emailController.text.trim().toLowerCase(),
+      passwordInput: passwordController.text,
+      action: action,
+      orgName: orgName,
+    );
     isLoading.value = false;
 
-    Get.offAllNamed(Routes.LOGIN);
+    if (success) {
+      Get.offAllNamed(Routes.LOGIN);
+    }
   }
 
   void goToLogin() {

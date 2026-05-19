@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../theme/app_theme.dart';
 import '../controllers/login_controller.dart';
+import '../../../routes/app_pages.dart';
 
 class LoginView extends GetView<LoginController> {
   const LoginView({Key? key}) : super(key: key);
@@ -86,7 +87,7 @@ class LoginView extends GetView<LoginController> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () {},
+                  onPressed: () => Get.toNamed(Routes.FORGOT_PASSWORD),
                   child: const Text(
                     "Forgot Password?",
                     style: TextStyle(color: AppTheme.primary),
