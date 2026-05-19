@@ -364,6 +364,29 @@ class ApiService extends GetxService {
     return [];
   }
 
+  Future<bool> deleteAsset(String assetId) async {
+    try {
+      final response = await _delete('/auth/assets/$assetId');
+      return response.statusCode == 200;
+    } catch (e) {
+      print("Delete asset error: $e");
+      return false;
+    }
+  }
+
+  Future<bool> updateAsset(String assetId, {String? name, String? base64Image}) async {
+    try {
+      final body = <String, dynamic>{};
+      if (name != null) body['name'] = name;
+      if (base64Image != null) body['image_data'] = base64Image;
+      final response = await _put('/auth/assets/$assetId', body);
+      return response.statusCode == 200;
+    } catch (e) {
+      print("Update asset error: $e");
+      return false;
+    }
+  }
+
   Future<bool> updateDelegation(String delegationId, String name) async {
     try {
       final response = await _put('/auth/delegations/$delegationId', {

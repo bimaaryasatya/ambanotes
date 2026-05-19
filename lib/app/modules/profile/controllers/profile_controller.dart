@@ -28,6 +28,9 @@ class ProfileController extends GetxController {
   final members = <Map<String, dynamic>>[].obs;
   final inviteEmailController = TextEditingController();
 
+  // Organization assets (kop & ttd)
+  final assets = <Map<String, dynamic>>[].obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -54,6 +57,7 @@ class ProfileController extends GetxController {
         final memberList = await apiService.getOrganizationMembers();
         members.assignAll(List<Map<String, dynamic>>.from(memberList));
         await fetchDelegations();
+        await fetchAssets();
       }
     } catch (e) {
       print("Fetch profile data error: $e");
@@ -281,6 +285,75 @@ class ProfileController extends GetxController {
   final delegations = <Map<String, dynamic>>[].obs;
   final delegationNameController = TextEditingController();
 
+  // Batch selection for delegations
+  final isDelegationSelectionMode = false.obs;
+  final selectedDelegationIds = <String>{}.obs;
+
+  void toggleDelegationSelectionMode() {
+    isDelegationSelectionMode.value = !isDelegationSelectionMode.value;
+    if (!isDelegationSelectionMode.value) selectedDelegationIds.clear();
+  }
+
+  void toggleDelegationSelection(String id) {
+    if (selectedDelegationIds.contains(id)) {
+      selectedDelegationIds.remove(id);
+    } else {
+      selectedDelegationIds.add(id);
+    }
+  }
+
+  void selectAllDelegations() {
+    if (selectedDelegationIds.length == delegations.length) {
+      selectedDelegationIds.clear();
+    } else {
+      selectedDelegationIds.assignAll(delegations.map((a) => a['_id'] as String));
+    }
+  }
+
+  Future<void> deleteSelectedDelegations() async {
+    if (selectedDelegationIds.isEmpty) return;
+
+    final count = selectedDelegationIds.length;
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Hapus Divisi Terpilih', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text('Apakah Anda yakin ingin menghapus $count divisi yang dipilih? Semua anggota di dalam divisi tersebut akan dipindahkan ke General (tanpa divisi).',
+            style: const TextStyle(fontSize: 13, color: Colors.grey)),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('Hapus Semua', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    isLoading.value = true;
+    int successCount = 0;
+    try {
+      for (final id in selectedDelegationIds.toList()) {
+        final ok = await apiService.deleteDelegation(id);
+        if (ok) successCount++;
+      }
+      Get.snackbar('Berhasil', '$successCount dari $count divisi berhasil dihapus.',
+        backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green, snackPosition: SnackPosition.BOTTOM);
+      selectedDelegationIds.clear();
+      isDelegationSelectionMode.value = false;
+      await fetchDelegations();
+      await fetchProfileData();
+    } catch (e) {
+      print("Batch delete delegation error: $e");
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   Future<void> fetchDelegations() async {
     try {
       final list = await apiService.getDelegations();
@@ -397,9 +470,77 @@ class ProfileController extends GetxController {
     }
   }
 
-  // --- Asset Upload (Kop Surat & TTD Digital) ---
+  // --- Asset Management (Kop Surat & TTD Digital) ---
   final isUploadingAsset = false.obs;
   final _picker = ImagePicker();
+
+  // Batch selection
+  final isSelectionMode = false.obs;
+  final selectedAssetIds = <String>{}.obs;
+
+  void toggleSelectionMode() {
+    isSelectionMode.value = !isSelectionMode.value;
+    if (!isSelectionMode.value) selectedAssetIds.clear();
+  }
+
+  void toggleAssetSelection(String assetId) {
+    if (selectedAssetIds.contains(assetId)) {
+      selectedAssetIds.remove(assetId);
+    } else {
+      selectedAssetIds.add(assetId);
+    }
+  }
+
+  void selectAllAssets() {
+    if (selectedAssetIds.length == assets.length) {
+      selectedAssetIds.clear();
+    } else {
+      selectedAssetIds.assignAll(assets.map((a) => a['id'] as String));
+    }
+  }
+
+  Future<void> deleteSelectedAssets() async {
+    if (selectedAssetIds.isEmpty) return;
+
+    final count = selectedAssetIds.length;
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Hapus Aset Terpilih', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text('Apakah Anda yakin ingin menghapus $count aset yang dipilih? Tindakan ini tidak dapat dibatalkan.',
+            style: const TextStyle(fontSize: 13, color: Colors.grey)),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('Hapus Semua', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    isUploadingAsset.value = true;
+    int successCount = 0;
+    try {
+      for (final id in selectedAssetIds.toList()) {
+        final ok = await apiService.deleteAsset(id);
+        if (ok) successCount++;
+      }
+      Get.snackbar('Berhasil', '$successCount dari $count aset berhasil dihapus.',
+        backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green, snackPosition: SnackPosition.BOTTOM);
+      selectedAssetIds.clear();
+      isSelectionMode.value = false;
+      await fetchAssets();
+    } catch (e) {
+      print("Batch delete error: $e");
+    } finally {
+      isUploadingAsset.value = false;
+    }
+  }
 
   Future<void> pickAndUploadAsset(String assetType) async {
     final XFile? image = await _picker.pickImage(
@@ -465,6 +606,7 @@ class ProfileController extends GetxController {
           colorText: Colors.green,
           snackPosition: SnackPosition.BOTTOM,
         );
+        await fetchAssets();
       } else {
         Get.snackbar(
           'Gagal', 'Upload aset gagal. Silakan coba lagi.',
@@ -480,6 +622,131 @@ class ProfileController extends GetxController {
         colorText: Colors.red,
         snackPosition: SnackPosition.BOTTOM,
       );
+    } finally {
+      isUploadingAsset.value = false;
+    }
+  }
+
+  Future<void> fetchAssets() async {
+    try {
+      final result = await apiService.getAssets();
+      assets.assignAll(List<Map<String, dynamic>>.from(result));
+    } catch (e) {
+      print("Fetch assets error: $e");
+    }
+  }
+
+  Future<void> deleteAsset(String assetId, String assetName) async {
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Hapus Aset', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text('Apakah Anda yakin ingin menghapus aset "$assetName"? Tindakan ini tidak dapat dibatalkan.', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('Hapus', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    isUploadingAsset.value = true;
+    try {
+      final success = await apiService.deleteAsset(assetId);
+      if (success) {
+        Get.snackbar('Berhasil', 'Aset "$assetName" telah dihapus.',
+          backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green, snackPosition: SnackPosition.BOTTOM);
+        await fetchAssets();
+      } else {
+        Get.snackbar('Gagal', 'Gagal menghapus aset.',
+          backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red, snackPosition: SnackPosition.BOTTOM);
+      }
+    } catch (e) {
+      print("Delete asset error: $e");
+    } finally {
+      isUploadingAsset.value = false;
+    }
+  }
+
+  Future<void> updateAssetName(String assetId, String currentName) async {
+    final nameController = TextEditingController(text: currentName);
+    final newName = await Get.dialog<String>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Ubah Nama Aset', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: nameController,
+          decoration: InputDecoration(
+            hintText: 'Nama baru aset',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: null),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              if (name.isNotEmpty) {
+                Get.back(result: name);
+              }
+            },
+            child: const Text('Simpan', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple)),
+          ),
+        ],
+      ),
+    );
+    if (newName == null || newName.isEmpty || newName == currentName) return;
+
+    isUploadingAsset.value = true;
+    try {
+      final success = await apiService.updateAsset(assetId, name: newName);
+      if (success) {
+        Get.snackbar('Berhasil', 'Nama aset diperbarui menjadi "$newName".',
+          backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green, snackPosition: SnackPosition.BOTTOM);
+        await fetchAssets();
+      } else {
+        Get.snackbar('Gagal', 'Gagal memperbarui nama aset.',
+          backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red, snackPosition: SnackPosition.BOTTOM);
+      }
+    } catch (e) {
+      print("Update asset error: $e");
+    } finally {
+      isUploadingAsset.value = false;
+    }
+  }
+
+  Future<void> updateAssetImage(String assetId, String assetName) async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1200,
+      imageQuality: 85,
+    );
+    if (image == null) return;
+
+    isUploadingAsset.value = true;
+    try {
+      final bytes = await File(image.path).readAsBytes();
+      final base64Image = base64Encode(bytes);
+      final success = await apiService.updateAsset(assetId, base64Image: base64Image);
+      if (success) {
+        Get.snackbar('Berhasil', 'Gambar aset "$assetName" berhasil diperbarui.',
+          backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green, snackPosition: SnackPosition.BOTTOM);
+        await fetchAssets();
+      } else {
+        Get.snackbar('Gagal', 'Gagal memperbarui gambar aset.',
+          backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red, snackPosition: SnackPosition.BOTTOM);
+      }
+    } catch (e) {
+      print("Update asset image error: $e");
     } finally {
       isUploadingAsset.value = false;
     }
