@@ -6,6 +6,7 @@ import 'package:ambanotes/app/theme/app_theme.dart';
 import 'package:ambanotes/app/routes/app_pages.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:ambanotes/app/widgets/drive_preview_widget.dart';
 
 class ArchiveDetailView extends GetView<ArchiveDetailController> {
   const ArchiveDetailView({Key? key}) : super(key: key);
@@ -426,7 +427,10 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
                 ),
               );
             } else {
-              previewContent = _buildDriveOpenButton(viewLink);
+              previewContent = DrivePreviewWidget(
+                viewLink: viewLink,
+                title: controller.document.title,
+              );
             }
           } else if (b64.isNotEmpty) {
             final isImage = mime.toLowerCase().contains('image') || 
