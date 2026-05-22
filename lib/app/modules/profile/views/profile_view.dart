@@ -978,11 +978,12 @@ class ProfileView extends GetView<ProfileController> {
   Widget _buildAssetItemTile(Map<String, dynamic> asset, bool inSelection) {
     final String id = asset['id'] ?? '';
     final String name = asset['name'] ?? 'Unnamed';
-    final String type = asset['asset_type'] ?? '';
-    final bool isKop = type == 'kop';
+    final String type = asset['asset_type'] ?? asset['type'] ?? '';
+    final bool isKop = type == 'kop' || type == 'letterhead';
     final Color color = isKop ? Colors.blue : Colors.teal;
     final IconData icon = isKop ? LucideIcons.fileImage : LucideIcons.penTool;
     final String label = isKop ? 'Kop Surat' : 'TTD Digital';
+    final bool isActive = asset['is_active'] ?? true;
 
     return Obx(() {
       final isSelected = controller.selectedAssetIds.contains(id);
@@ -1042,24 +1043,55 @@ class ProfileView extends GetView<ProfileController> {
                             color: AppTheme.onSurface),
                         overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 2),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(label,
-                          style: TextStyle(
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: color.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(label,
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  color: color,
+                                  fontWeight: FontWeight.w700)),
+                        ),
+                        const SizedBox(width: 6),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? Colors.green.withOpacity(0.13)
+                                : Colors.grey.withOpacity(0.13),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            isActive ? 'Aktif' : 'Nonaktif',
+                            style: TextStyle(
                               fontSize: 10,
-                              color: color,
-                              fontWeight: FontWeight.w700)),
+                              fontWeight: FontWeight.w700,
+                              color: isActive ? Colors.green[700] : Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
               if (!inSelection) ...[
                 const SizedBox(width: 8),
+                // Toggle aktif/nonaktif
+                _buildIconAction(
+                  icon: isActive ? LucideIcons.toggleRight : LucideIcons.toggleLeft,
+                  color: isActive ? Colors.green : Colors.grey,
+                  tooltip: isActive ? "Nonaktifkan" : "Aktifkan",
+                  onTap: () => controller.toggleAssetActivation(id, name, isActive),
+                ),
+                const SizedBox(width: 4),
                 // Edit
                 _buildIconAction(
                   icon: LucideIcons.edit2,
@@ -1212,6 +1244,24 @@ class ProfileView extends GetView<ProfileController> {
                   borderRadius: BorderRadius.circular(10),
                   child: imagePreview,
                 ),
+              ),
+              ListTile(
+                leading: Icon(
+                  (asset['is_active'] ?? true) ? LucideIcons.toggleRight : LucideIcons.toggleLeft,
+                  color: (asset['is_active'] ?? true) ? Colors.green : Colors.grey,
+                ),
+                title: Text(
+                  (asset['is_active'] ?? true) ? "Nonaktifkan Aset" : "Aktifkan Aset",
+                  style: TextStyle(
+                    color: (asset['is_active'] ?? true) ? Colors.green[700] : Colors.grey[700],
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                onTap: () {
+                  Get.back();
+                  controller.toggleAssetActivation(
+                    id, name, asset['is_active'] ?? true);
+                },
               ),
               ListTile(
                 leading: const Icon(LucideIcons.edit2, color: AppTheme.primary),
