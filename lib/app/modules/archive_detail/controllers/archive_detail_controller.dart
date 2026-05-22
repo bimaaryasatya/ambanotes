@@ -107,6 +107,7 @@ class ArchiveDetailController extends GetxController {
   void askAIForMore() {
     Get.toNamed('/chat', arguments: {
       'context': 'document',
+      'docId': document.id,
       'documentTitle': document.title,
       'documentSummary': document.summary,
     });

@@ -10,7 +10,7 @@ import 'app/data/services/notification_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
-  
+
   // Initialize Core Services globally
   Get.put(ApiService(), permanent: true);
   Get.put(NotificationService(), permanent: true);
