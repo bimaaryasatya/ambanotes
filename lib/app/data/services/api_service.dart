@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 
 class ApiService extends GetxService {
   // Using local computer IP address so both Android Emulator AND physical phones can access it
-  final baseUrl = 'https://notes.bimazznxt.my.id'.obs;
+  final baseUrl = 'https://api.bimazznxt.my.id'.obs;
 
   final token = RxnString();
   final userId = RxnString();
@@ -295,7 +295,8 @@ class ApiService extends GetxService {
         return false;
       }
     } catch (e) {
-      Get.snackbar('Network Error', 'Gagal terhubung ke server: $e', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('Network Error', 'Gagal terhubung ke server: $e',
+          snackPosition: SnackPosition.BOTTOM);
       return false;
     }
   }
@@ -319,7 +320,8 @@ class ApiService extends GetxService {
         return false;
       }
     } catch (e) {
-      Get.snackbar('Network Error', 'Gagal terhubung ke server: $e', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('Network Error', 'Gagal terhubung ke server: $e',
+          snackPosition: SnackPosition.BOTTOM);
       return false;
     }
   }
@@ -336,8 +338,8 @@ class ApiService extends GetxService {
     return [];
   }
 
-  Future<bool> uploadAsset(
-      String assetType, String targetDelegationId, String base64Image, String name) async {
+  Future<bool> uploadAsset(String assetType, String targetDelegationId,
+      String base64Image, String name) async {
     try {
       final response = await _post('/auth/assets', {
         'type': assetType,
@@ -374,7 +376,8 @@ class ApiService extends GetxService {
     }
   }
 
-  Future<bool> updateAsset(String assetId, {String? name, String? base64Image}) async {
+  Future<bool> updateAsset(String assetId,
+      {String? name, String? base64Image}) async {
     try {
       final body = <String, dynamic>{};
       if (name != null) body['name'] = name;
@@ -408,8 +411,6 @@ class ApiService extends GetxService {
       return false;
     }
   }
-
-
 
   Future<String?> getGoogleConnectUrl() async {
     try {
@@ -452,7 +453,8 @@ class ApiService extends GetxService {
       }
 
       final form = FormData({
-        'file': MultipartFile(bytes, filename: filename, contentType: contentType),
+        'file':
+            MultipartFile(bytes, filename: filename, contentType: contentType),
       });
 
       final response = await _post('/document/upload', form);
@@ -474,12 +476,14 @@ class ApiService extends GetxService {
   Future<List<dynamic>> listDocuments() async {
     try {
       final response = await _get('/document/list');
-      print("[DEBUG listDocuments] Response status code: ${response.statusCode}");
+      print(
+          "[DEBUG listDocuments] Response status code: ${response.statusCode}");
       print("[DEBUG listDocuments] Response body: ${response.body}");
       if (response.statusCode == 200) {
         return response.body as List<dynamic>;
       } else {
-        print("[DEBUG listDocuments] Failed to fetch documents list: status=${response.statusCode}, body=${response.body}");
+        print(
+            "[DEBUG listDocuments] Failed to fetch documents list: status=${response.statusCode}, body=${response.body}");
       }
     } catch (e) {
       print("[DEBUG listDocuments] Network Exception: $e");
@@ -537,7 +541,8 @@ class ApiService extends GetxService {
         }
 
         payload = FormData({
-          'file': MultipartFile(bytes, filename: filename, contentType: contentType),
+          'file': MultipartFile(bytes,
+              filename: filename, contentType: contentType),
         });
       } else if (text != null) {
         payload = {'text': text};
@@ -631,13 +636,18 @@ class ApiService extends GetxService {
     return null;
   }
 
-  Future<String?> chat(String message, String context, {List<Map<String, dynamic>>? history}) async {
+  Future<String?> chat(String message, String context,
+      {List<Map<String, dynamic>>? history, String? docId}) async {
     try {
-      final response = await _post('/ai/chat', {
+      final Map<String, dynamic> payload = {
         'message': message,
         'context': context,
         'history': history ?? [],
-      });
+      };
+      if (docId != null) {
+        payload['doc_id'] = docId;
+      }
+      final response = await _post('/ai/chat', payload);
       if (response.statusCode == 200) {
         return response.body['answer'];
       }
@@ -647,7 +657,32 @@ class ApiService extends GetxService {
     return null;
   }
 
-  Future<Map<String, dynamic>?> chatGlobal(String message, {List<Map<String, dynamic>>? history}) async {
+  Future<List<dynamic>> getChatHistories() async {
+    try {
+      final response = await _get('/ai/chats');
+      if (response.statusCode == 200 && response.body != null) {
+        return response.body as List<dynamic>;
+      }
+    } catch (e) {
+      print("Get chat histories error: $e");
+    }
+    return [];
+  }
+
+  Future<Map<String, dynamic>?> getChatDetail(String docId) async {
+    try {
+      final response = await _get('/ai/chat/$docId');
+      if (response.statusCode == 200 && response.body != null) {
+        return response.body as Map<String, dynamic>;
+      }
+    } catch (e) {
+      print("Get chat detail error: $e");
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> chatGlobal(String message,
+      {List<Map<String, dynamic>>? history}) async {
     try {
       final response = await _post('/ai/chat-global', {
         'message': message,
