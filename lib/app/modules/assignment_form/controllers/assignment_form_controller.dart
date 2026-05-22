@@ -17,6 +17,7 @@ class AssignmentFormController extends GetxController {
   final selectedTtd = ''.obs;
   final sourceDocumentTitle = 'Undangan'.obs;
   final isLoading = false.obs;
+  final isAssetsMissing = false.obs;
   
   String docId = 'unknown';
 
@@ -44,11 +45,13 @@ class AssignmentFormController extends GetxController {
 
       for (var asset in assets) {
         final type = asset['type'];
-        final name = asset['name'] ?? '';
-        if (name.isNotEmpty) {
-          if (type == 'letterhead') {
+        final name = (asset['name'] ?? '') as String;
+        // Only include active assets (defaults to active if field absent)
+        final active = asset['is_active'] ?? true;
+        if (name.isNotEmpty && active == true) {
+          if (type == 'kop' || type == 'letterhead') {
             kops.add(name);
-          } else if (type == 'signature') {
+          } else if (type == 'ttd' || type == 'signature') {
             ttds.add(name);
           }
         }
@@ -57,19 +60,23 @@ class AssignmentFormController extends GetxController {
       kopSuratOptions.assignAll(kops);
       ttdOptions.assignAll(ttds);
 
+      // Set missing flag – drives warning banner + disables submit button
+      isAssetsMissing.value = kops.isEmpty || ttds.isEmpty;
+
       if (kopSuratOptions.isNotEmpty) {
         selectedKopSurat.value = kopSuratOptions.first;
       } else {
-        selectedKopSurat.value = 'Kop Utama';
+        selectedKopSurat.value = '';
       }
 
       if (ttdOptions.isNotEmpty) {
         selectedTtd.value = ttdOptions.first;
       } else {
-        selectedTtd.value = 'TTD Utama';
+        selectedTtd.value = '';
       }
     } catch (e) {
       print("Load assets error: $e");
+      isAssetsMissing.value = true;
     }
   }
 
@@ -105,6 +112,16 @@ class AssignmentFormController extends GetxController {
 
   void submitForm() async {
     FocusManager.instance.primaryFocus?.unfocus();
+    if (isAssetsMissing.value) {
+      Get.snackbar(
+        'Tidak Dapat Dibuat',
+        'Owner belum menambahkan atau mengaktifkan Kop Surat dan Tanda Tangan Digital.',
+        backgroundColor: Colors.orange.withOpacity(0.1),
+        colorText: Colors.orange,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
     if (formKey.currentState!.validate()) {
       if (selectedDate.value == null || selectedTime.value == null) {
         Get.snackbar('Error', 'Silakan pilih tanggal dan waktu', backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);

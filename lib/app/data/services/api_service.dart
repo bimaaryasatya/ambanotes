@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 
 class ApiService extends GetxService {
   // Using local computer IP address so both Android Emulator AND physical phones can access it
-  final baseUrl = 'https://api.bimazznxt.my.id'.obs;
+  final baseUrl = 'https://notes.bimazznxt.my.id'.obs;
 
   final token = RxnString();
   final userId = RxnString();
@@ -377,11 +377,12 @@ class ApiService extends GetxService {
   }
 
   Future<bool> updateAsset(String assetId,
-      {String? name, String? base64Image}) async {
+      {String? name, String? base64Image, bool? isActive}) async {
     try {
       final body = <String, dynamic>{};
       if (name != null) body['name'] = name;
       if (base64Image != null) body['image_data'] = base64Image;
+      if (isActive != null) body['is_active'] = isActive;
       final response = await _put('/auth/assets/$assetId', body);
       return response.statusCode == 200;
     } catch (e) {

@@ -751,4 +751,34 @@ class ProfileController extends GetxController {
       isUploadingAsset.value = false;
     }
   }
+
+  Future<void> toggleAssetActivation(String assetId, String name, bool currentActive) async {
+    isLoading.value = true;
+    try {
+      final newStatus = !currentActive;
+      final success = await apiService.updateAsset(assetId, isActive: newStatus);
+      if (success) {
+        Get.snackbar(
+          'Berhasil', 
+          'Aset "$name" berhasil ${newStatus ? "diaktifkan" : "dinonaktifkan"}.',
+          backgroundColor: Colors.green.withOpacity(0.1), 
+          colorText: Colors.green, 
+          snackPosition: SnackPosition.BOTTOM
+        );
+        await fetchAssets();
+      } else {
+        Get.snackbar(
+          'Gagal', 
+          'Gagal mengubah status aktif aset.',
+          backgroundColor: Colors.red.withOpacity(0.1), 
+          colorText: Colors.red, 
+          snackPosition: SnackPosition.BOTTOM
+        );
+      }
+    } catch (e) {
+      print("Toggle asset activation error: $e");
+    } finally {
+      isLoading.value = false;
+    }
+  }
 }
