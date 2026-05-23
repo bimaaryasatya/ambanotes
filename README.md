@@ -115,7 +115,6 @@ Aplikasi menggunakan arsitektur **GetX Pattern** (MVC) dengan state management r
 | **Animation** | Flutter Staggered Animations `^1.0.0` | Animasi list staggered |
 | **File Handling** | Image Picker `^1.0.7`, File Picker `^8.0.0` | Pemilihan file & gambar |
 | **Document Scanner** | Google ML Kit Document Scanner `^0.2.1` | Scan dokumen via kamera |
-| **ML On-Device** | TFLite Model (`quantized_fairscan_segmentation_model`) | Segmentasi dokumen on-device |
 | **Date/Time** | intl `^0.19.0` | Format tanggal bahasa Indonesia |
 | **WebView** | webview_flutter `^4.8.0` | Preview dokumen Google Drive |
 | **URL Launcher** | url_launcher `^6.3.2` | Buka link eksternal |
@@ -132,9 +131,6 @@ Aplikasi menggunakan arsitektur **GetX Pattern** (MVC) dengan state management r
 
 ```
 ambanotes/
-├── assets/
-│   └── ml/
-│       └── quantized_fairscan_segmentation_model.tflite  # Model TFLite segmentasi dokumen
 ├── lib/
 │   ├── main.dart                          # Entry point aplikasi
 │   └── app/
@@ -786,11 +782,6 @@ Output: Dokumen terindeks, ringkasan, metadata, searchable
 - Memprediksi indeks beban kerja 3 bulan ke depan
 - Tren: Meningkat / Menurun / Stabil
 
-### 7. On-Device ML (Document Segmentation)
-- Model TFLite `quantized_fairscan_segmentation_model.tflite` di-bundle dalam app
-- Segmentasi dokumen langsung di perangkat tanpa internet
-- Digunakan untuk preprocessing sebelum OCR
-
 ---
 
 ## 👥 Sistem Role & Akses
@@ -876,7 +867,6 @@ flutter build apk --release
 ### Catatan Penting
 - Pastikan backend server berjalan dan dapat diakses dari device
 - Untuk physical device, pastikan device dan server berada di jaringan yang sama
-- Model ML TFLite sudah di-bundle di `assets/ml/`
 
 ---
 
