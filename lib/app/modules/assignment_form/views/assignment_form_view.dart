@@ -27,7 +27,7 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
                 _buildReferenceCard(),
                 const SizedBox(height: 24),
 
-                // ── Missing assets warning banner ──────────────────────────
+                // Missing assets warning banner
                 Obx(() {
                   if (!controller.isAssetsMissing.value) return const SizedBox.shrink();
                   return Container(
@@ -50,8 +50,8 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text(
+                            children: [
+                              const Text(
                                 'Kop Surat / TTD Belum Tersedia',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
@@ -59,11 +59,12 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
                                   fontSize: 14,
                                 ),
                               ),
-                              SizedBox(height: 4),
+                              const SizedBox(height: 4),
                               Text(
-                                'Owner belum menambahkan atau mengaktifkan Kop Surat dan Tanda Tangan Digital. '
-                                'Hubungi owner untuk mengatur aset organisasi terlebih dahulu.',
-                                style: TextStyle(
+                                isOwner
+                                    ? 'Kop surat atau tanda tangan digital untuk divisi ini belum tersedia/aktif. Silakan buka halaman Profil untuk mengelola dan mengaktifkan aset.'
+                                    : 'Kop surat atau tanda tangan digital untuk divisi Anda belum tersedia/aktif. Silakan segera hubungi Owner/Administrator untuk mengupload dan mengaktifkan aset divisi Anda.',
+                                style: const TextStyle(
                                   fontSize: 12,
                                   color: Colors.orange,
                                   height: 1.5,
@@ -84,7 +85,7 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
                         color: AppTheme.onSurface)),
                 const SizedBox(height: 16),
 
-                // ── Kop & TTD only shown to Owner ─────────────────────────
+                // Kop & TTD only shown to Owner
                 if (isOwner) ...[
                   _buildDropdown(
                     label: 'Kop Surat',
@@ -104,6 +105,19 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
                     onChanged: (val) {
                       if (val != null) controller.selectedTtd.value = val;
                     },
+                  ),
+                  const SizedBox(height: 16),
+                ] else ...[
+                  _buildReadOnlyAssetTile(
+                    label: 'Kop Surat (Aktif)',
+                    icon: LucideIcons.building,
+                    value: controller.selectedKopSurat,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildReadOnlyAssetTile(
+                    label: 'Tanda Tangan (TTD Aktif)',
+                    icon: LucideIcons.penTool,
+                    value: controller.selectedTtd,
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -139,7 +153,7 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
                 ),
                 const SizedBox(height: 40),
 
-                // ── Submit button ──────────────────────────────────────────
+                // Submit button
                 Obx(() {
                   final disabled =
                       controller.isLoading.value || controller.isAssetsMissing.value;
@@ -307,5 +321,54 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
         ),
       ),
     );
+  }
+
+  Widget _buildReadOnlyAssetTile({
+    required String label,
+    required IconData icon,
+    required RxString value,
+  }) {
+    return Obx(() => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.grey.withOpacity(0.05),
+            border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.6)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: AppTheme.outline.withOpacity(0.7)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(fontSize: 10, color: AppTheme.outline),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      value.value.isNotEmpty ? value.value : 'Belum Ditentukan',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: value.value.isNotEmpty
+                            ? AppTheme.onSurface
+                            : Colors.orange.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (value.value.isNotEmpty)
+                const Icon(
+                  LucideIcons.lock,
+                  size: 14,
+                  color: AppTheme.outline,
+                ),
+            ],
+          ),
+        ));
   }
 }

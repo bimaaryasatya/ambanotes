@@ -641,9 +641,7 @@ class ProfileView extends GetView<ProfileController> {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  //  ASET ORGANISASI — IMPROVED
-  // ─────────────────────────────────────────────────────────────────────────
+  // ASET ORGANISASI — PER DIVISI
 
   Widget _buildAssetUploadCard() {
     return Container(
@@ -662,7 +660,7 @@ class ProfileView extends GetView<ProfileController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header ──────────────────────────────────────────────────────
+          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
             child: Row(
@@ -688,7 +686,7 @@ class ProfileView extends GetView<ProfileController> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("Aset Organisasi",
+                      const Text("Aset Kop & TTD per Divisi",
                           style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -701,203 +699,129 @@ class ProfileView extends GetView<ProfileController> {
                     ],
                   ),
                 ),
-                // Tombol Pilih / Batal
-                Obx(() => controller.assets.isNotEmpty
-                    ? _buildToggleChip(
-                        label: controller.isSelectionMode.value
-                            ? "Batal"
-                            : "Pilih",
-                        isActive: controller.isSelectionMode.value,
-                        onTap: controller.toggleSelectionMode,
-                      )
-                    : const SizedBox.shrink()),
               ],
             ),
           ),
 
-          // ── Divider tipis ────────────────────────────────────────────────
+          // Divider tipis
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            padding:
+                const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
             child: Container(
               height: 1,
               color: AppTheme.outlineVariant.withOpacity(0.3),
             ),
           ),
 
-          // ── Upload tiles ─────────────────────────────────────────────────
+          // Upload indicator
+          Obx(() => controller.isUploadingAsset.value
+              ? const Center(
+                  child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Column(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 12),
+                      Text("Mengunggah aset...",
+                          style: TextStyle(
+                              fontSize: 13, color: AppTheme.outline)),
+                    ],
+                  ),
+                ))
+              : const SizedBox.shrink()),
+
+          // Info box
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Obx(
-              () => controller.isUploadingAsset.value
-                  ? const Center(
-                      child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 20),
-                      child: Column(
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 12),
-                          Text("Mengunggah aset...",
-                              style: TextStyle(
-                                  fontSize: 13, color: AppTheme.outline)),
-                        ],
-                      ),
-                    ))
-                  : Column(
-                      children: [
-                        _buildAssetUploadTile(
-                          icon: LucideIcons.fileImage,
-                          title: "Kop Surat",
-                          subtitle: "Gambar header surat resmi organisasi",
-                          color: Colors.blue,
-                          onTap: () => controller.pickAndUploadAsset('kop'),
-                        ),
-                        const SizedBox(height: 10),
-                        _buildAssetUploadTile(
-                          icon: LucideIcons.penTool,
-                          title: "Tanda Tangan Digital",
-                          subtitle: "Gambar TTD / QR Code pimpinan",
-                          color: Colors.teal,
-                          onTap: () => controller.pickAndUploadAsset('ttd'),
-                        ),
-                      ],
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.withOpacity(0.04),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                    color: Colors.deepPurple.withOpacity(0.12)),
+              ),
+              child: Row(
+                children: const [
+                  Icon(LucideIcons.info,
+                      size: 14, color: Colors.deepPurple),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Hanya 1 kop dan 1 TTD yang dapat aktif per divisi. '
+                      'Mengaktifkan aset lain akan otomatis menonaktifkan yang sebelumnya.',
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.deepPurple,
+                          height: 1.4),
                     ),
+                  ),
+                ],
+              ),
             ),
           ),
 
-          // ── Daftar aset ──────────────────────────────────────────────────
+          // Per-delegation sections
           Obx(() {
-            if (controller.assets.isEmpty) {
+            if (controller.delegations.isEmpty) {
               return Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  padding: const EdgeInsets.symmetric(vertical: 28),
                   decoration: BoxDecoration(
                     color: Colors.grey.withOpacity(0.04),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                        color: AppTheme.outlineVariant.withOpacity(0.3),
-                        style: BorderStyle.solid),
+                        color: AppTheme.outlineVariant.withOpacity(0.3)),
                   ),
                   child: const Column(
                     children: [
-                      Icon(LucideIcons.imageOff,
+                      Icon(LucideIcons.gitBranch,
                           size: 32, color: AppTheme.outlineVariant),
                       SizedBox(height: 8),
-                      Text("Belum ada aset tersimpan",
-                          style:
-                              TextStyle(fontSize: 13, color: AppTheme.outline)),
+                      Text("Belum ada divisi terdaftar",
+                          style: TextStyle(
+                              color: AppTheme.outline, fontSize: 13)),
+                      SizedBox(height: 4),
+                      Text(
+                          "Buat divisi terlebih dahulu untuk mengelola aset kop & TTD",
+                          style: TextStyle(
+                              color: AppTheme.outlineVariant,
+                              fontSize: 11)),
                     ],
                   ),
                 ),
               );
             }
 
-            final inSelection = controller.isSelectionMode.value;
             return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                  child: Row(
-                    children: [
-                      const Text("Daftar Aset",
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.onSurfaceVariant)),
-                      const Spacer(),
-                      if (inSelection) ...[
-                        Obx(() => Text(
-                              "${controller.selectedAssetIds.length} dipilih",
-                              style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppTheme.primary,
-                                  fontWeight: FontWeight.bold),
-                            )),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: controller.selectAllAssets,
-                          child: const Text("Pilih Semua",
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppTheme.outline,
-                                  decoration: TextDecoration.underline)),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: controller.assets.length > 5
-                        ? 5
-                        : controller.assets.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final asset = controller.assets[index];
-                      return _buildAssetItemTile(asset, inSelection);
-                    },
-                  ),
-                ),
-                // Lihat selengkapnya
-                if (controller.assets.length > 5 && !inSelection)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Center(
-                      child: TextButton.icon(
-                        onPressed: () => _showAllAssetsDialog(),
-                        icon: const Icon(LucideIcons.layoutGrid,
-                            size: 14, color: AppTheme.primary),
-                        label: Text(
-                          "Lihat ${controller.assets.length - 5} Aset Lainnya",
-                          style: const TextStyle(
-                              color: AppTheme.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13),
-                        ),
-                      ),
-                    ),
-                  ),
-                // Tombol hapus batch
-                if (inSelection)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                    child: Obx(() => SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            icon: const Icon(LucideIcons.trash2, size: 16),
-                            label: Text(
-                              controller.selectedAssetIds.isEmpty
-                                  ? "Pilih aset untuk dihapus"
-                                  : "Hapus ${controller.selectedAssetIds.length} Aset Terpilih",
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 13),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  controller.selectedAssetIds.isEmpty
-                                      ? Colors.grey[200]
-                                      : Colors.red,
-                              foregroundColor:
-                                  controller.selectedAssetIds.isEmpty
-                                      ? Colors.grey
-                                      : Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16)),
-                              elevation: 0,
-                            ),
-                            onPressed: controller.selectedAssetIds.isEmpty
-                                ? null
-                                : controller.deleteSelectedAssets,
-                          ),
-                        )),
-                  ),
-                const SizedBox(height: 20),
+                ...controller.delegations.map((delegation) {
+                  final delId =
+                      (delegation['_id'] as String?) ?? '';
+                  final delName =
+                      (delegation['name'] as String?) ?? 'Divisi';
+
+                  final kopAssets = controller.assets
+                      .where((a) =>
+                          (a['type'] == 'kop' ||
+                              a['type'] == 'letterhead') &&
+                          a['delegation_id'] == delId)
+                      .toList();
+
+                  final ttdAssets = controller.assets
+                      .where((a) =>
+                          (a['type'] == 'ttd' ||
+                              a['type'] == 'signature') &&
+                          a['delegation_id'] == delId)
+                      .toList();
+
+                  return _buildDelegationAssetSection(
+                      delId, delName, kopAssets, ttdAssets);
+                }).toList(),
+                const SizedBox(height: 8),
               ],
             );
           }),
@@ -906,70 +830,186 @@ class ProfileView extends GetView<ProfileController> {
     );
   }
 
-  Widget _buildAssetUploadTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+  Widget _buildDelegationAssetSection(
+      String delegationId,
+      String delegationName,
+      List<Map<String, dynamic>> kopAssets,
+      List<Map<String, dynamic>> ttdAssets) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: Container(
-        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.04),
+          color: Colors.deepPurple.withOpacity(0.025),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.18)),
+          border:
+              Border.all(color: Colors.deepPurple.withOpacity(0.12)),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Division header
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.deepPurple.withOpacity(0.07),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
               ),
-              child: Icon(icon, size: 20, color: color),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Text(title,
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: color)),
-                  const SizedBox(height: 2),
-                  Text(subtitle,
+                  const Icon(LucideIcons.gitBranch,
+                      size: 14, color: Colors.deepPurple),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      delegationName,
                       style: const TextStyle(
-                          fontSize: 11, color: AppTheme.outline)),
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.deepPurple),
+                    ),
+                  ),
+                  _buildSmallUploadBtn(
+                    label: '+ Kop',
+                    color: Colors.blue,
+                    onTap: () =>
+                        controller.pickAndUploadAssetToDelegation(
+                            'kop', delegationId, delegationName),
+                  ),
+                  const SizedBox(width: 6),
+                  _buildSmallUploadBtn(
+                    label: '+ TTD',
+                    color: Colors.teal,
+                    onTap: () =>
+                        controller.pickAndUploadAssetToDelegation(
+                            'ttd', delegationId, delegationName),
+                  ),
                 ],
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+
+            // Asset list
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(LucideIcons.upload, size: 13, color: color),
-                  const SizedBox(width: 4),
-                  Text("Upload",
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: color)),
+                  _buildAssetSubsection(
+                    label: 'Kop Surat',
+                    icon: LucideIcons.fileImage,
+                    color: Colors.blue,
+                    assets: kopAssets,
+                    emptyMsg: 'Belum ada kop surat — tekan + Kop untuk upload',
+                  ),
+                  const SizedBox(height: 10),
+                  _buildAssetSubsection(
+                    label: 'Tanda Tangan Digital',
+                    icon: LucideIcons.penTool,
+                    color: Colors.teal,
+                    assets: ttdAssets,
+                    emptyMsg: 'Belum ada TTD — tekan + TTD untuk upload',
+                  ),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAssetSubsection({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required List<Map<String, dynamic>> assets,
+    required String emptyMsg,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 12, color: color.withOpacity(0.75)),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: color.withOpacity(0.8)),
+            ),
+            // Active count badge
+            if (assets.any((a) => a['is_active'] == true)) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '1 aktif',
+                  style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green[700]),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 6),
+        if (assets.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+                vertical: 10, horizontal: 12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.04),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: color.withOpacity(0.12)),
+            ),
+            child: Text(
+              emptyMsg,
+              style: TextStyle(
+                  fontSize: 11, color: color.withOpacity(0.5)),
+            ),
+          )
+        else
+          ...assets.map((asset) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _buildAssetItemTile(asset, false),
+              )),
+      ],
+    );
+  }
+
+  Widget _buildSmallUploadBtn({
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withOpacity(0.25)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: color),
         ),
       ),
     );
@@ -1291,50 +1331,6 @@ class ProfileView extends GetView<ProfileController> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  void _showAllAssetsDialog() {
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.deepPurple.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(LucideIcons.stamp,
-                  size: 20, color: Colors.deepPurple),
-            ),
-            const SizedBox(width: 8),
-            const Text("Semua Aset",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          ],
-        ),
-        content: Container(
-          width: double.maxFinite,
-          constraints: const BoxConstraints(maxHeight: 450),
-          child: Obx(() => ListView.separated(
-                shrinkWrap: true,
-                itemCount: controller.assets.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 8),
-                itemBuilder: (context, index) {
-                  final asset = controller.assets[index];
-                  return _buildAssetItemTile(
-                      asset, controller.isSelectionMode.value);
-                },
-              )),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text("Tutup", style: TextStyle(color: Colors.grey)),
-          ),
-        ],
       ),
     );
   }

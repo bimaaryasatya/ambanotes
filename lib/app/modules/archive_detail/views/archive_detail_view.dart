@@ -101,6 +101,7 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
                         'nomor_surat': controller.nomorSurat.value,
                         'perihal': controller.perihal.value,
                         'organisasi': controller.organisasiPenerbit.value,
+                        'delegation_id': controller.delegationId.value,
                       }),
                       icon: const Icon(LucideIcons.penTool, color: Colors.white),
                       label: const Text(

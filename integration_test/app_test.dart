@@ -36,7 +36,7 @@ class MockApiService extends ApiService {
       );
       return false;
     }
-    
+
     token.value = "mock_token_xyz_123";
     userId.value = "user_bima_123";
     username.value = "Bima Sunu";
@@ -94,7 +94,8 @@ class MockApiService extends ApiService {
     required String newPasswordInput,
   }) async {
     if (otpInput == "000000") {
-      Get.snackbar('Error', 'OTP tidak valid', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('Error', 'OTP tidak valid',
+          snackPosition: SnackPosition.BOTTOM);
       return false;
     }
     return true;
@@ -134,7 +135,8 @@ class MockApiService extends ApiService {
         'filename': 'surat_undangan_krenova.pdf',
         'category': 'Undangan',
         'created_at': '2026-05-18T10:00:00Z',
-        'text': 'Surat undangan rapat koordinasi Krenova Kabupaten Tegal di Kantor Bappeda.',
+        'text':
+            'Surat undangan rapat koordinasi Krenova Kabupaten Tegal di Kantor Bappeda.',
         'entities': {
           'names': ['Bima Sunu', 'Geraldi Novalino'],
           'locations': ['Bappeda Slawi'],
@@ -147,7 +149,8 @@ class MockApiService extends ApiService {
         'filename': 'laporan_anggaran_sekretariat.pdf',
         'category': 'Laporan',
         'created_at': '2026-05-19T14:30:00Z',
-        'text': 'Laporan rekapitulasi anggaran belanja secretariat triwulan I sebesar Rp5.000.000.',
+        'text':
+            'Laporan rekapitulasi anggaran belanja secretariat triwulan I sebesar Rp5.000.000.',
         'entities': {
           'names': ['Ir. Budi'],
           'locations': ['Slawi'],
@@ -183,7 +186,8 @@ class MockApiService extends ApiService {
   @override
   Future<Map<String, dynamic>?> getWeeklySummary() async {
     return {
-      'summary': 'Analisis Mingguan AmbaAI: Terjadi peningkatan volume dokumen administrasi sebesar 15% pada minggu ini. Fokus utama didominasi oleh Surat Undangan koordinasi Krenova Kabupaten Tegal 2026 dan Laporan Anggaran Dinas PU. Seluruh disposisi telah disalurkan dengan rata-rata waktu respons 12 menit.'
+      'summary':
+          'Analisis Mingguan AmbaAI: Terjadi peningkatan volume dokumen administrasi sebesar 15% pada minggu ini. Fokus utama didominasi oleh Surat Undangan koordinasi Krenova Kabupaten Tegal 2026 dan Laporan Anggaran Dinas PU. Seluruh disposisi telah disalurkan dengan rata-rata waktu respons 12 menit.'
     };
   }
 
@@ -191,13 +195,10 @@ class MockApiService extends ApiService {
   Future<Map<String, dynamic>?> getPredictiveTrends() async {
     return {
       'average_weekly_load': 4.8,
-      'forecast_trend': 'Meningkat secara signifikan menjelang pelaksanaan Krenova 2026',
+      'forecast_trend':
+          'Meningkat secara signifikan menjelang pelaksanaan Krenova 2026',
       'workload_index': 7.8,
-      'stats': {
-        'surat_masuk': 14,
-        'surat_keluar': 8,
-        'reminders': 5
-      }
+      'stats': {'surat_masuk': 14, 'surat_keluar': 8, 'reminders': 5}
     };
   }
 
@@ -211,16 +212,8 @@ class MockApiService extends ApiService {
         'ndc_worship': 7,
         'gms_tegal': 5
       },
-      'likes_distribution': {
-        'min': 100,
-        'max': 1200,
-        'avg': 642.5
-      },
-      'most_active_day': {
-        'Sunday': 8,
-        'Friday': 4,
-        'Saturday': 3
-      },
+      'likes_distribution': {'min': 100, 'max': 1200, 'avg': 642.5},
+      'most_active_day': {'Sunday': 8, 'Friday': 4, 'Saturday': 3},
       'event_trends': {
         'Krenova 2026': 9,
         'Rapat Koordinasi': 4,
@@ -238,7 +231,8 @@ class MockNotificationService extends NotificationService {
   }
 
   @override
-  Future<void> showNotification(String title, String body, {String? payload}) async {
+  Future<void> showNotification(String title, String body,
+      {String? payload}) async {
     print('MOCK NOTIFICATION: [$title] - $body');
   }
 }
@@ -261,7 +255,8 @@ void main() {
       await Get.deleteAll(force: true);
     });
 
-    testWidgets('Operational Test Suite - E2E Navigation & Screenshots', (WidgetTester tester) async {
+    testWidgets('Operational Test Suite - E2E Navigation & Screenshots',
+        (WidgetTester tester) async {
       // Helper function to capture screenshot correctly on Android
       Future<void> takeScreenshot(String name) async {
         await binding.takeScreenshot(name);
@@ -280,7 +275,7 @@ void main() {
       // OP-03: Verify Login Screen & Credentials
       // ==========================================
       expect(find.byType(LoginView), findsOneWidget);
-      
+
       // Enter invalid credentials for OP-04 test simulation
       await tester.enterText(find.byType(TextField).at(0), 'user@mail.com');
       await tester.enterText(find.byType(TextField).at(1), 'salah123');
@@ -351,7 +346,7 @@ void main() {
       // Back out to Profile page to test Logout
       Get.offAllNamed(Routes.DASHBOARD);
       await tester.pumpAndSettle();
-      
+
       // Tap Profile navigation tab
       await tester.tap(find.byIcon(LucideIcons.user));
       await tester.pumpAndSettle(const Duration(seconds: 1));
@@ -363,7 +358,7 @@ void main() {
       // Navigate back to Login and go to Forgot Password Page
       Get.offAllNamed(Routes.LOGIN);
       await tester.pumpAndSettle(const Duration(seconds: 1));
-      
+
       // Tap forgot password text button
       await tester.tap(find.text('Forgot Password?'));
       await tester.pumpAndSettle(const Duration(seconds: 1));
@@ -391,8 +386,9 @@ void main() {
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle(const Duration(seconds: 1));
       await takeScreenshot('OP_01_Register_Step2_OrgSetup');
-      
-      print('AmbaNotes Integration Test & Auto Screenshot executed successfully!');
+
+      print(
+          'AmbaNotes Integration Test & Auto Screenshot executed successfully!');
     });
   });
 }

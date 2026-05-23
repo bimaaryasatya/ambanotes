@@ -627,6 +627,101 @@ class ProfileController extends GetxController {
     }
   }
 
+  /// Upload aset (kop/ttd) langsung ke divisi tertentu (dipanggil dari section per divisi).
+  Future<void> pickAndUploadAssetToDelegation(
+      String assetType, String targetDelegationId, String delegationName) async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1200,
+      imageQuality: 85,
+    );
+    if (image == null) return;
+
+    final nameController = TextEditingController();
+    final nameResult = await Get.dialog<String>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          assetType == 'kop'
+              ? 'Kop Surat — $delegationName'
+              : 'TTD Digital — $delegationName',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Masukkan nama untuk ${assetType == 'kop' ? "Kop Surat" : "Tanda Tangan"} '
+              'divisi "$delegationName". Aset baru akan berstatus nonaktif, aktifkan setelah upload.',
+              style: const TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameController,
+              decoration: InputDecoration(
+                hintText: assetType == 'kop' ? 'Kop Utama, Kop Dinas, dll' : 'TTD Kepala, TTD Plt, dll',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: null),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              if (name.isNotEmpty) {
+                Get.back(result: name);
+              } else {
+                Get.snackbar('Input Error', 'Nama tidak boleh kosong',
+                    backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
+              }
+            },
+            child: const Text('Upload', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple)),
+          ),
+        ],
+      ),
+    );
+
+    if (nameResult == null || nameResult.isEmpty) return;
+
+    isUploadingAsset.value = true;
+    try {
+      final bytes = await File(image.path).readAsBytes();
+      final base64Image = base64Encode(bytes);
+      final success = await apiService.uploadAsset(assetType, targetDelegationId, base64Image, nameResult);
+      if (success) {
+        Get.snackbar(
+          'Berhasil Diunggah',
+          'Aset "$nameResult" berhasil ditambahkan ke divisi $delegationName. Aktifkan untuk menggunakannya.',
+          backgroundColor: Colors.green.withOpacity(0.1),
+          colorText: Colors.green,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        await fetchAssets();
+      } else {
+        Get.snackbar(
+          'Gagal', 'Upload aset gagal. Silakan coba lagi.',
+          backgroundColor: Colors.red.withOpacity(0.1),
+          colorText: Colors.red,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } catch (e) {
+      print("Upload asset to delegation error: $e");
+      Get.snackbar('Error', 'Terjadi kesalahan: $e',
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      isUploadingAsset.value = false;
+    }
+  }
+
   Future<void> fetchAssets() async {
     try {
       final result = await apiService.getAssets();

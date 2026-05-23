@@ -20,6 +20,7 @@ class AssignmentFormController extends GetxController {
   final isAssetsMissing = false.obs;
   
   String docId = 'unknown';
+  String? docDelegationId;
 
   final kopSuratOptions = <String>[].obs;
   final ttdOptions = <String>[].obs;
@@ -33,13 +34,29 @@ class AssignmentFormController extends GetxController {
       letterNumberController.text = args['nomor_surat'] ?? '';
       locationController.text = args['organisasi'] ?? '';
       sourceDocumentTitle.value = args['title'] ?? args['perihal'] ?? 'Undangan';
+      docDelegationId = args['delegation_id'];
     }
     loadAssets();
   }
 
   Future<void> loadAssets() async {
     try {
-      final assets = await apiService.getAssets();
+      final List<dynamic> assets;
+      if (apiService.isOwner) {
+        if (docDelegationId != null && docDelegationId!.isNotEmpty && docDelegationId != 'general') {
+          assets = await apiService.getAssetsByDelegation(docDelegationId!);
+        } else {
+          assets = await apiService.getAssets();
+        }
+      } else {
+        final myDelegationId = apiService.delegationId.value ?? '';
+        if (myDelegationId.isNotEmpty && myDelegationId != 'general') {
+          assets = await apiService.getAssetsByDelegation(myDelegationId);
+        } else {
+          assets = await apiService.getAssets();
+        }
+      }
+
       final kops = <String>[];
       final ttds = <String>[];
 

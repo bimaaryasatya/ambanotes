@@ -366,6 +366,18 @@ class ApiService extends GetxService {
     return [];
   }
 
+  Future<List<dynamic>> getAssetsByDelegation(String delegationId) async {
+    try {
+      final response = await _get('/auth/assets/by-delegation/$delegationId');
+      if (response.statusCode == 200) {
+        return response.body as List<dynamic>;
+      }
+    } catch (e) {
+      print("Get assets by delegation error: $e");
+    }
+    return [];
+  }
+
   Future<bool> deleteAsset(String assetId) async {
     try {
       final response = await _delete('/auth/assets/$assetId');
