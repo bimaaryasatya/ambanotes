@@ -1090,7 +1090,10 @@ class ManageEnterpriseView extends GetView<ProfileController> {
                             color: AppTheme.onSurface),
                         overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 2),
-                    Row(
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -1105,7 +1108,6 @@ class ManageEnterpriseView extends GetView<ProfileController> {
                                   color: color,
                                   fontWeight: FontWeight.w600)),
                         ),
-                        const SizedBox(width: 6),
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 250),
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
