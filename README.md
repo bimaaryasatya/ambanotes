@@ -8,7 +8,7 @@
 
 # 🏛️ Arcliva AI — Aplikasi Pengelolaan Dokumen Sekretariat Berbasis AI
 
-**Arcliva AI** (sebelumnya _AmbaNotes_) adalah aplikasi mobile berbasis **Flutter** yang dirancang khusus untuk mendigitalkan, mengelola, dan mengarsipkan dokumen persuratan sekretariat secara cerdas menggunakan teknologi **Artificial Intelligence**. Aplikasi ini menggabungkan fitur OCR (Optical Character Recognition), NLP (Natural Language Processing), klasifikasi dokumen otomatis, AI chatbot kontekstual, serta integrasi **Google Drive** untuk penyimpanan awan yang aman — semuanya dalam satu platform yang elegan dan mudah digunakan.
+**Arcliva AI** adalah aplikasi mobile berbasis **Flutter** yang dirancang khusus untuk mendigitalkan, mengelola, dan mengarsipkan dokumen persuratan sekretariat secara cerdas menggunakan teknologi **Artificial Intelligence**. Aplikasi ini menggabungkan fitur OCR (Optical Character Recognition), NLP (Natural Language Processing), klasifikasi dokumen otomatis, AI chatbot kontekstual, serta integrasi **Google Drive** untuk penyimpanan awan yang aman — semuanya dalam satu platform yang elegan dan mudah digunakan.
 
 ---
 
@@ -27,7 +27,7 @@
   - [5. Archive (Document List) Page](#5--archive-document-list-page)
   - [6. Archive Detail Page](#6--archive-detail-page)
   - [7. Assignment Letter Form Page](#7--assignment-letter-form-page-buat-surat-tugas)
-  - [8. AI Chat Page (AmbaAI)](#8--ai-chat-page-ambaai)
+  - [8. AI Chat Page (ArclivaAI)](#8--ai-chat-page-arclivaai)
   - [9. Insight & Analytics Page](#9--insight--analytics-page)
   - [10. Profile & Settings Page](#10--profile--settings-page)
   - [11. Manage Enterprise Page](#11--manage-enterprise-page-manajemen-organisasi)
