@@ -36,7 +36,8 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
               children: [
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
-                Text('Fetching details from AI analysis...', style: TextStyle(color: AppTheme.outline)),
+                Text('Fetching details from AI analysis...',
+                    style: TextStyle(color: AppTheme.outline)),
               ],
             ),
           );
@@ -58,12 +59,42 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
                   const SizedBox(height: 24),
                 ],
                 _buildMetadataSection(),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: OutlinedButton.icon(
+                    onPressed: controller.backupToLocal,
+                    icon: const Icon(LucideIcons.downloadCloud),
+                    label: const Text(
+                      'Cadangkan ke Lokal Android',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.primary,
+                      side: const BorderSide(color: AppTheme.primary),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+                ),
                 () {
-                  final showReminder = controller.document.type.toLowerCase().contains('undangan') || 
-                                       controller.document.type.toLowerCase().contains('invitation') ||
-                                       controller.document.summary.toLowerCase().contains('rapat') || 
-                                       controller.document.summary.toLowerCase().contains('tanggal') || 
-                                       controller.document.summary.toLowerCase().contains('waktu');
+                  final showReminder = controller.document.type
+                          .toLowerCase()
+                          .contains('undangan') ||
+                      controller.document.type
+                          .toLowerCase()
+                          .contains('invitation') ||
+                      controller.document.summary
+                          .toLowerCase()
+                          .contains('rapat') ||
+                      controller.document.summary
+                          .toLowerCase()
+                          .contains('tanggal') ||
+                      controller.document.summary
+                          .toLowerCase()
+                          .contains('waktu');
                   if (!showReminder) return const SizedBox.shrink();
 
                   return Padding(
@@ -72,15 +103,21 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton.icon(
-                        onPressed: () => controller.showAddReminderDialog(context),
-                        icon: const Icon(LucideIcons.calendarPlus, color: Colors.white),
+                        onPressed: () =>
+                            controller.showAddReminderDialog(context),
+                        icon: const Icon(LucideIcons.calendarPlus,
+                            color: Colors.white),
                         label: const Text(
                           'Tambahkan Pengingat ke Google Calendar',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.aiAccent,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16)),
                           elevation: 2,
                         ),
                       ),
@@ -89,28 +126,39 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
                 }(),
                 const SizedBox(height: 24),
                 _buildDocumentPreview(context),
-                if (controller.document.type.toLowerCase().contains('invitation') || 
-                    controller.document.type.toLowerCase().contains('undangan')) ...[
+                if (controller.document.type
+                        .toLowerCase()
+                        .contains('invitation') ||
+                    controller.document.type
+                        .toLowerCase()
+                        .contains('undangan')) ...[
                   const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton.icon(
-                      onPressed: () => Get.toNamed(Routes.ASSIGNMENT_LETTER_FORM, arguments: {
-                        'doc_id': controller.document.id,
-                        'nomor_surat': controller.nomorSurat.value,
-                        'perihal': controller.perihal.value,
-                        'organisasi': controller.organisasiPenerbit.value,
-                        'delegation_id': controller.delegationId.value,
-                      }),
-                      icon: const Icon(LucideIcons.penTool, color: Colors.white),
+                      onPressed: () => Get.toNamed(
+                          Routes.ASSIGNMENT_LETTER_FORM,
+                          arguments: {
+                            'doc_id': controller.document.id,
+                            'nomor_surat': controller.nomorSurat.value,
+                            'perihal': controller.perihal.value,
+                            'organisasi': controller.organisasiPenerbit.value,
+                            'delegation_id': controller.delegationId.value,
+                          }),
+                      icon:
+                          const Icon(LucideIcons.penTool, color: Colors.white),
                       label: const Text(
                         'Buat Surat Tugas',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
                         elevation: 4,
                       ),
                     ),
@@ -133,7 +181,10 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.3)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
+          BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
         ],
       ),
       child: Column(
@@ -142,14 +193,18 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppTheme.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   doc.type.toUpperCase(),
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primary),
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primary),
                 ),
               ),
               const Spacer(),
@@ -159,7 +214,10 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
           const SizedBox(height: 16),
           Text(
             doc.title,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.onSurface),
+            style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.onSurface),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -169,15 +227,18 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(LucideIcons.calendar, size: 16, color: AppTheme.outline),
+                  const Icon(LucideIcons.calendar,
+                      size: 16, color: AppTheme.outline),
                   const SizedBox(width: 8),
-                  Text(doc.archivedDate, style: const TextStyle(color: AppTheme.outline)),
+                  Text(doc.archivedDate,
+                      style: const TextStyle(color: AppTheme.outline)),
                 ],
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(LucideIcons.hardDrive, size: 16, color: AppTheme.outline),
+                  const Icon(LucideIcons.hardDrive,
+                      size: 16, color: AppTheme.outline),
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(
@@ -196,11 +257,14 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
   }
 
   Widget _buildStatusBadge(String status) {
-    final isApproved = status == 'Approved' || status.toLowerCase() == 'processed';
+    final isApproved =
+        status == 'Approved' || status.toLowerCase() == 'processed';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: isApproved ? Colors.green.withOpacity(0.1) : AppTheme.secondaryContainer.withOpacity(0.3),
+        color: isApproved
+            ? Colors.green.withOpacity(0.1)
+            : AppTheme.secondaryContainer.withOpacity(0.3),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -242,13 +306,18 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
             children: [
               Icon(LucideIcons.sparkles, color: AppTheme.aiAccent),
               SizedBox(width: 8),
-              Text('AI Summary', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.aiAccent)),
+              Text('AI Summary',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: AppTheme.aiAccent)),
             ],
           ),
           const SizedBox(height: 12),
           Text(
             controller.document.summary,
-            style: const TextStyle(fontSize: 14, color: AppTheme.onSurfaceVariant, height: 1.5),
+            style: const TextStyle(
+                fontSize: 14, color: AppTheme.onSurfaceVariant, height: 1.5),
           ),
           const SizedBox(height: 16),
           Align(
@@ -260,7 +329,8 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           )
@@ -271,17 +341,22 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
 
   Widget _buildSecuritySuggestionCard() {
     return Obx(() {
-      if (controller.securitySuggestion.value.isEmpty) return const SizedBox.shrink();
+      if (controller.securitySuggestion.value.isEmpty)
+        return const SizedBox.shrink();
       final isConnected = controller.googleDriveConnected.value;
 
       return Container(
         margin: const EdgeInsets.only(top: 24),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: isConnected ? Colors.green.withOpacity(0.05) : Colors.orange.withOpacity(0.05),
+          color: isConnected
+              ? Colors.green.withOpacity(0.05)
+              : Colors.orange.withOpacity(0.05),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isConnected ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
+            color: isConnected
+                ? Colors.green.withOpacity(0.2)
+                : Colors.orange.withOpacity(0.2),
           ),
         ),
         child: Column(
@@ -290,13 +365,17 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
             Row(
               children: [
                 Icon(
-                  isConnected ? LucideIcons.shieldCheck : LucideIcons.shieldAlert,
+                  isConnected
+                      ? LucideIcons.shieldCheck
+                      : LucideIcons.shieldAlert,
                   color: isConnected ? Colors.green : Colors.orange,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  isConnected ? 'Secured in Google Drive' : 'Cybersecurity Alert',
+                  isConnected
+                      ? 'Secured in Google Drive'
+                      : 'Cybersecurity Alert',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -308,7 +387,8 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
             const SizedBox(height: 12),
             Text(
               controller.securitySuggestion.value,
-              style: const TextStyle(fontSize: 13, color: AppTheme.onSurfaceVariant, height: 1.5),
+              style: const TextStyle(
+                  fontSize: 13, color: AppTheme.onSurfaceVariant, height: 1.5),
             ),
             if (!isConnected) ...[
               const SizedBox(height: 16),
@@ -321,7 +401,8 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.orange,
                     side: const BorderSide(color: Colors.orange),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
@@ -334,31 +415,37 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
 
   Widget _buildMetadataSection() {
     return Obx(() => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Extracted NER Entities & Metadata', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.onSurface)),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.2)),
-          ),
-          child: Column(
-            children: [
-              _buildMetadataRow('Nomor Surat', controller.nomorSurat.value),
-              const Divider(height: 24),
-              _buildMetadataRow('Perihal', controller.perihal.value),
-              const Divider(height: 24),
-              _buildMetadataRow('Pengirim/Organisasi', controller.organisasiPenerbit.value),
-              const Divider(height: 24),
-              _buildMetadataRow('Uploaded By', controller.uploadedBy.value),
-            ],
-          ),
-        ),
-      ],
-    ));
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Extracted NER Entities & Metadata',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.onSurface)),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border:
+                    Border.all(color: AppTheme.outlineVariant.withOpacity(0.2)),
+              ),
+              child: Column(
+                children: [
+                  _buildMetadataRow('Nomor Surat', controller.nomorSurat.value),
+                  const Divider(height: 24),
+                  _buildMetadataRow('Perihal', controller.perihal.value),
+                  const Divider(height: 24),
+                  _buildMetadataRow('Pengirim/Organisasi',
+                      controller.organisasiPenerbit.value),
+                  const Divider(height: 24),
+                  _buildMetadataRow('Uploaded By', controller.uploadedBy.value),
+                ],
+              ),
+            ),
+          ],
+        ));
   }
 
   Widget _buildMetadataRow(String label, String value) {
@@ -366,13 +453,17 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: AppTheme.outline, fontSize: 13)),
+        Text(label,
+            style: const TextStyle(color: AppTheme.outline, fontSize: 13)),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
-            value, 
+            value,
             textAlign: TextAlign.right,
-            style: const TextStyle(color: AppTheme.onSurface, fontWeight: FontWeight.w500, fontSize: 13),
+            style: const TextStyle(
+                color: AppTheme.onSurface,
+                fontWeight: FontWeight.w500,
+                fontSize: 13),
           ),
         ),
       ],
@@ -383,7 +474,11 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Preview', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.onSurface)),
+        const Text('Preview',
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.onSurface)),
         const SizedBox(height: 12),
         Obx(() {
           final isDrive = controller.googleDriveConnected.value;
@@ -395,15 +490,16 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
 
           if (isDrive && viewLink.isNotEmpty) {
             final downloadLink = controller.driveContentLink.value;
-            final isImage = mime.toLowerCase().contains('image') || 
-                            controller.document.title.toLowerCase().endsWith('.png') ||
-                            controller.document.title.toLowerCase().endsWith('.jpg') ||
-                            controller.document.title.toLowerCase().endsWith('.jpeg') ||
-                            controller.document.title.toLowerCase().endsWith('.webp');
+            final isImage = mime.toLowerCase().contains('image') ||
+                controller.document.title.toLowerCase().endsWith('.png') ||
+                controller.document.title.toLowerCase().endsWith('.jpg') ||
+                controller.document.title.toLowerCase().endsWith('.jpeg') ||
+                controller.document.title.toLowerCase().endsWith('.webp');
 
             if (isImage && downloadLink.isNotEmpty) {
               previewContent = GestureDetector(
-                onTap: () => _showFullScreenImage(context, Image.network(downloadLink, fit: BoxFit.contain)),
+                onTap: () => _showFullScreenImage(
+                    context, Image.network(downloadLink, fit: BoxFit.contain)),
                 child: MouseRegion(
                   cursor: SystemMouseCursors.click,
                   child: Tooltip(
@@ -416,7 +512,8 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
                         loadingBuilder: (context, child, loadingProgress) {
                           if (loadingProgress == null) return child;
                           return const Center(
-                            child: CircularProgressIndicator(color: AppTheme.primary),
+                            child: CircularProgressIndicator(
+                                color: AppTheme.primary),
                           );
                         },
                         errorBuilder: (context, error, stackTrace) {
@@ -434,16 +531,17 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
               );
             }
           } else if (b64.isNotEmpty) {
-            final isImage = mime.toLowerCase().contains('image') || 
-                            controller.document.title.toLowerCase().endsWith('.png') ||
-                            controller.document.title.toLowerCase().endsWith('.jpg') ||
-                            controller.document.title.toLowerCase().endsWith('.jpeg') ||
-                            controller.document.title.toLowerCase().endsWith('.webp');
+            final isImage = mime.toLowerCase().contains('image') ||
+                controller.document.title.toLowerCase().endsWith('.png') ||
+                controller.document.title.toLowerCase().endsWith('.jpg') ||
+                controller.document.title.toLowerCase().endsWith('.jpeg') ||
+                controller.document.title.toLowerCase().endsWith('.webp');
             if (isImage) {
               try {
                 final bytes = base64Decode(b64);
                 previewContent = GestureDetector(
-                  onTap: () => _showFullScreenImage(context, Image.memory(bytes, fit: BoxFit.contain)),
+                  onTap: () => _showFullScreenImage(
+                      context, Image.memory(bytes, fit: BoxFit.contain)),
                   child: MouseRegion(
                     cursor: SystemMouseCursors.click,
                     child: Tooltip(
@@ -460,7 +558,8 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
                 );
               } catch (e) {
                 previewContent = const Center(
-                  child: Text('Gagal mendekode gambar biner.', style: TextStyle(color: Colors.red)),
+                  child: Text('Gagal mendekode gambar biner.',
+                      style: TextStyle(color: Colors.red)),
                 );
               }
             } else {
@@ -468,15 +567,19 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(LucideIcons.fileText, size: 48, color: AppTheme.primary),
+                    const Icon(LucideIcons.fileText,
+                        size: 48, color: AppTheme.primary),
                     const SizedBox(height: 16),
                     Text(
                       controller.document.title,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 14),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
-                    const Text('Berkas non-gambar disimpan lokal di database.', style: TextStyle(color: AppTheme.outline, fontSize: 12)),
+                    const Text('Berkas non-gambar disimpan lokal di database.',
+                        style:
+                            TextStyle(color: AppTheme.outline, fontSize: 12)),
                   ],
                 ),
               );
@@ -488,7 +591,8 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
                 children: [
                   Icon(LucideIcons.fileText, size: 48, color: AppTheme.outline),
                   SizedBox(height: 16),
-                  Text('Pratinjau berkas tidak tersedia.', style: TextStyle(color: AppTheme.outline)),
+                  Text('Pratinjau berkas tidak tersedia.',
+                      style: TextStyle(color: AppTheme.outline)),
                 ],
               ),
             );
@@ -500,7 +604,8 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.3)),
+              border:
+                  Border.all(color: AppTheme.outlineVariant.withOpacity(0.3)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.02),
@@ -532,7 +637,9 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
               icon: const Icon(LucideIcons.x, color: Colors.white),
               onPressed: () => Navigator.of(context).pop(),
             ),
-            title: const Text('Pratinjau Lengkap', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            title: const Text('Pratinjau Lengkap',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
           ),
           body: Center(
             child: InteractiveViewer(
@@ -557,7 +664,10 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
           const SizedBox(height: 16),
           const Text(
             'Berkas Disimpan Aman di Google Drive',
-            style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.onSurface, fontSize: 14),
+            style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.onSurface,
+                fontSize: 14),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
@@ -579,10 +689,12 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
               );
             },
             icon: const Icon(LucideIcons.copy, size: 16, color: Colors.white),
-            label: const Text('Salin Tautan Drive', style: TextStyle(color: Colors.white)),
+            label: const Text('Salin Tautan Drive',
+                style: TextStyle(color: Colors.white)),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
           )
         ],
@@ -594,13 +706,16 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
     return Obx(() {
       final isDispatched = controller.delegationId.value != null;
       final delName = controller.delegationName.value ?? 'Belum Ditentukan';
-      
+
       return Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: isDispatched ? Colors.green.withOpacity(0.3) : Colors.amber.withOpacity(0.3)),
+          border: Border.all(
+              color: isDispatched
+                  ? Colors.green.withOpacity(0.3)
+                  : Colors.amber.withOpacity(0.3)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.02),
@@ -621,20 +736,26 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
                 const SizedBox(width: 8),
                 const Text(
                   "Disposisi Surat",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.onSurface),
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.onSurface),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             const Text(
               "Tentukan divisi penerima dokumen ini agar dapat diakses oleh staff pada divisi tersebut.",
-              style: TextStyle(fontSize: 13, color: AppTheme.onSurfaceVariant, height: 1.5),
+              style: TextStyle(
+                  fontSize: 13, color: AppTheme.onSurfaceVariant, height: 1.5),
             ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: isDispatched ? Colors.green.withOpacity(0.05) : Colors.amber.withOpacity(0.05),
+                color: isDispatched
+                    ? Colors.green.withOpacity(0.05)
+                    : Colors.amber.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -653,7 +774,8 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: isDispatched ? Colors.green : Colors.amber.shade800,
+                        color:
+                            isDispatched ? Colors.green : Colors.amber.shade800,
                       ),
                     ),
                   ),
@@ -665,15 +787,19 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
               width: double.infinity,
               height: 48,
               child: ElevatedButton.icon(
-                onPressed: () => controller.suggestAndShowDispositionDialog(context),
-                icon: const Icon(LucideIcons.sparkles, size: 16, color: Colors.white),
+                onPressed: () =>
+                    controller.suggestAndShowDispositionDialog(context),
+                icon: const Icon(LucideIcons.sparkles,
+                    size: 16, color: Colors.white),
                 label: Text(
                   isDispatched ? "Ubah Disposisi" : "Kirim / Disposisi Surat",
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
                   elevation: 0,
                 ),
               ),

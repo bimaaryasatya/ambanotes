@@ -13,7 +13,7 @@ import '../../../data/services/api_service.dart';
 
 class ArchiveDetailController extends GetxController {
   final apiService = Get.find<ApiService>();
-  
+
   late Document document;
   final isLoading = false.obs;
   final securitySuggestion = ''.obs;
@@ -22,7 +22,7 @@ class ArchiveDetailController extends GetxController {
   final organisasiPenerbit = ''.obs;
   final uploadedBy = ''.obs;
   final googleDriveConnected = false.obs;
-  
+
   final base64Image = ''.obs;
   final driveWebViewLink = ''.obs;
   final driveContentLink = ''.obs;
@@ -31,11 +31,11 @@ class ArchiveDetailController extends GetxController {
   final delegationId = RxnString();
   final delegationName = RxnString();
   final delegations = <Map<String, dynamic>>[].obs;
-  
+
   final isAnalyzingDisposition = false.obs;
   final aiSuggestedDelegation = ''.obs;
   final aiSuggestedReason = ''.obs;
- 
+
   @override
   void onInit() {
     super.onInit();
@@ -64,15 +64,19 @@ class ArchiveDetailController extends GetxController {
         final entities = detail['entities'] ?? {};
         nomorSurat.value = entities['nomor_surat'] ?? 'Tidak Terdeteksi';
         perihal.value = entities['perihal'] ?? 'Tidak Terdeteksi';
-        organisasiPenerbit.value = entities['organisasi_penerbit'] ?? 'Tidak Terdeteksi';
-        
+        organisasiPenerbit.value =
+            entities['organisasi_penerbit'] ?? 'Tidak Terdeteksi';
+
         securitySuggestion.value = detail['security_suggestion'] ?? '';
         uploadedBy.value = detail['uploaded_by']?.toString() ?? 'Admin User';
-        
+
         mimetype.value = detail['mimetype'] ?? 'image/jpeg';
-        
+
         final gd = detail['google_drive'];
-        if (gd != null) {
+
+        if (gd != null &&
+            ((gd['web_view_link'] ?? '').toString().isNotEmpty ||
+                (gd['web_content_link'] ?? '').toString().isNotEmpty)) {
           googleDriveConnected.value = true;
           driveWebViewLink.value = gd['web_view_link'] ?? '';
           driveContentLink.value = gd['web_content_link'] ?? '';
@@ -88,10 +92,12 @@ class ArchiveDetailController extends GetxController {
         if (apiService.isOwner) {
           final list = await apiService.getDelegations();
           delegations.assignAll(List<Map<String, dynamic>>.from(list));
-          
+
           if (delegationId.value != null) {
-            final found = delegations.firstWhereOrNull((d) => d['_id'] == delegationId.value);
-            delegationName.value = found != null ? found['name'] : 'Belum Ditentukan';
+            final found = delegations
+                .firstWhereOrNull((d) => d['_id'] == delegationId.value);
+            delegationName.value =
+                found != null ? found['name'] : 'Belum Ditentukan';
           } else {
             delegationName.value = 'Belum Ditentukan';
           }
@@ -115,7 +121,9 @@ class ArchiveDetailController extends GetxController {
 
   Future<void> downloadDocument() async {
     if (googleDriveConnected.value && driveWebViewLink.value.isNotEmpty) {
-      final url = driveContentLink.value.isNotEmpty ? driveContentLink.value : driveWebViewLink.value;
+      final url = driveContentLink.value.isNotEmpty
+          ? driveContentLink.value
+          : driveWebViewLink.value;
       Get.snackbar(
         'Download',
         'Membuka tautan unduh di browser...',
@@ -126,7 +134,8 @@ class ArchiveDetailController extends GetxController {
       try {
         await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
       } catch (e) {
-        Get.snackbar('Error', 'Gagal membuka browser: $e', snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar('Error', 'Gagal membuka browser: $e',
+            snackPosition: SnackPosition.BOTTOM);
       }
     } else if (base64Image.value.isNotEmpty) {
       try {
@@ -134,7 +143,7 @@ class ArchiveDetailController extends GetxController {
         final tempDir = await getTemporaryDirectory();
         final file = File('${tempDir.path}/${document.title}');
         await file.writeAsBytes(bytes);
-        
+
         Get.snackbar(
           'Download Berhasil',
           'Berkas disimpan sementara di ${file.path}',
@@ -145,14 +154,79 @@ class ArchiveDetailController extends GetxController {
             onPressed: () {
               Share.shareXFiles([XFile(file.path)], text: document.title);
             },
-            child: const Text('Buka', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text('Buka',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         );
       } catch (e) {
-        Get.snackbar('Error', 'Gagal mengunduh dokumen: $e', snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar('Error', 'Gagal mengunduh dokumen: $e',
+            snackPosition: SnackPosition.BOTTOM);
       }
     } else {
-      Get.snackbar('Info', 'Sumber dokumen tidak tersedia.', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('Info', 'Sumber dokumen tidak tersedia.',
+          snackPosition: SnackPosition.BOTTOM);
+    }
+  }
+
+  Future<void> backupToLocal() async {
+    try {
+      List<int>? bytes;
+
+      if (googleDriveConnected.value) {
+        bytes = await apiService.downloadDocumentBytes(document.id);
+      } else if (base64Image.value.isNotEmpty) {
+        bytes = base64Decode(base64Image.value);
+      }
+
+      if (bytes == null || bytes.isEmpty) {
+        Get.snackbar(
+          'Backup Gagal',
+          'Sumber dokumen tidak tersedia.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+
+      Directory? targetDir;
+
+      if (Platform.isAndroid) {
+        targetDir = Directory('/storage/emulated/0/Download');
+
+        if (!await targetDir.exists()) {
+          targetDir = await getExternalStorageDirectory();
+        }
+      } else {
+        targetDir = await getApplicationDocumentsDirectory();
+      }
+
+      if (targetDir == null) {
+        Get.snackbar(
+          'Backup Gagal',
+          'Folder penyimpanan tidak ditemukan.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+
+      final safeName = document.title.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+      final file = File('${targetDir.path}/$safeName');
+
+      await file.writeAsBytes(bytes);
+
+      Get.snackbar(
+        'Backup Berhasil',
+        'Dokumen berhasil disimpan ke ${file.path}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.withOpacity(0.9),
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Backup Error',
+        'Gagal mencadangkan dokumen: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 
@@ -177,7 +251,10 @@ class ArchiveDetailController extends GetxController {
                   children: [
                     const Text(
                       'Bagikan Dokumen',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.onSurface),
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.onSurface),
                     ),
                     const Spacer(),
                     IconButton(
@@ -201,10 +278,13 @@ class ArchiveDetailController extends GetxController {
                       color: AppTheme.primary.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(LucideIcons.share2, color: AppTheme.primary),
+                    child:
+                        const Icon(LucideIcons.share2, color: AppTheme.primary),
                   ),
-                  title: const Text('Bagikan via Aplikasi Sistem', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Kirim berkas/tautan via WhatsApp, Gmail, dll.'),
+                  title: const Text('Bagikan via Aplikasi Sistem',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text(
+                      'Kirim berkas/tautan via WhatsApp, Gmail, dll.'),
                   onTap: () async {
                     Get.back();
                     await _triggerNativeShare();
@@ -220,14 +300,17 @@ class ArchiveDetailController extends GetxController {
                     ),
                     child: const Icon(LucideIcons.copy, color: Colors.blue),
                   ),
-                  title: const Text('Salin Informasi Dokumen', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Salin ringkasan dan tautan dokumen ke papan klip.'),
+                  title: const Text('Salin Informasi Dokumen',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text(
+                      'Salin ringkasan dan tautan dokumen ke papan klip.'),
                   onTap: () {
                     Get.back();
                     _copyDocInfoToClipboard();
                   },
                 ),
-                if (googleDriveConnected.value && driveWebViewLink.value.isNotEmpty) ...[
+                if (googleDriveConnected.value &&
+                    driveWebViewLink.value.isNotEmpty) ...[
                   const Divider(height: 8),
                   ListTile(
                     leading: Container(
@@ -236,16 +319,21 @@ class ArchiveDetailController extends GetxController {
                         color: Colors.green.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(LucideIcons.externalLink, color: Colors.green),
+                      child: const Icon(LucideIcons.externalLink,
+                          color: Colors.green),
                     ),
-                    title: const Text('Buka Tautan Google Drive', style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: const Text('Buka pratinjau berkas di Google Drive Anda.'),
+                    title: const Text('Buka Tautan Google Drive',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: const Text(
+                        'Buka pratinjau berkas di Google Drive Anda.'),
                     onTap: () async {
                       Get.back();
                       try {
-                        await launchUrl(Uri.parse(driveWebViewLink.value), mode: LaunchMode.externalApplication);
+                        await launchUrl(Uri.parse(driveWebViewLink.value),
+                            mode: LaunchMode.externalApplication);
                       } catch (e) {
-                        Get.snackbar('Error', 'Gagal membuka tautan: $e', snackPosition: SnackPosition.BOTTOM);
+                        Get.snackbar('Error', 'Gagal membuka tautan: $e',
+                            snackPosition: SnackPosition.BOTTOM);
                       }
                     },
                   ),
@@ -261,7 +349,8 @@ class ArchiveDetailController extends GetxController {
   }
 
   Future<void> _triggerNativeShare() async {
-    String shareText = 'Dokumen: ${document.title}\nTipe: ${document.type}\nStatus: ${document.status}\n\nRingkasan AI:\n${document.summary}';
+    String shareText =
+        'Dokumen: ${document.title}\nTipe: ${document.type}\nStatus: ${document.status}\n\nRingkasan AI:\n${document.summary}';
     if (googleDriveConnected.value && driveWebViewLink.value.isNotEmpty) {
       shareText += '\n\nTautan Google Drive:\n${driveWebViewLink.value}';
     }
@@ -285,11 +374,12 @@ class ArchiveDetailController extends GetxController {
   }
 
   void _copyDocInfoToClipboard() {
-    String shareText = 'Dokumen: ${document.title}\nTipe: ${document.type}\nStatus: ${document.status}\n\nRingkasan AI:\n${document.summary}';
+    String shareText =
+        'Dokumen: ${document.title}\nTipe: ${document.type}\nStatus: ${document.status}\n\nRingkasan AI:\n${document.summary}';
     if (googleDriveConnected.value && driveWebViewLink.value.isNotEmpty) {
       shareText += '\n\nTautan Google Drive:\n${driveWebViewLink.value}';
     }
-    
+
     Clipboard.setData(ClipboardData(text: shareText));
     Get.snackbar(
       'Salin Berhasil',
@@ -302,9 +392,10 @@ class ArchiveDetailController extends GetxController {
 
   void showAddReminderDialog(BuildContext context) {
     final taskController = TextEditingController(
-      text: perihal.value != 'Tidak Terdeteksi' ? 'Agenda: ${perihal.value}' : 'Agenda: ${document.title}'
-    );
-    
+        text: perihal.value != 'Tidak Terdeteksi'
+            ? 'Agenda: ${perihal.value}'
+            : 'Agenda: ${document.title}');
+
     String parsedDate = DateTime.now().toIso8601String().split('T')[0];
     if (document.archivedDate.isNotEmpty) {
       final regex = RegExp(r'\d{4}-\d{2}-\d{2}');
@@ -313,12 +404,13 @@ class ArchiveDetailController extends GetxController {
         parsedDate = match.group(0)!;
       }
     }
-    
+
     final dateController = TextEditingController(text: parsedDate);
     final timeController = TextEditingController(text: '09:00');
     final locationController = TextEditingController(
-      text: organisasiPenerbit.value != 'Tidak Terdeteksi' ? organisasiPenerbit.value : ''
-    );
+        text: organisasiPenerbit.value != 'Tidak Terdeteksi'
+            ? organisasiPenerbit.value
+            : '');
 
     Get.dialog(
       AlertDialog(
@@ -331,7 +423,8 @@ class ArchiveDetailController extends GetxController {
                 color: AppTheme.aiSoft,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(LucideIcons.calendarPlus, color: AppTheme.aiAccent, size: 20),
+              child: const Icon(LucideIcons.calendarPlus,
+                  color: AppTheme.aiAccent, size: 20),
             ),
             const SizedBox(width: 12),
             const Expanded(
@@ -357,7 +450,8 @@ class ArchiveDetailController extends GetxController {
                 decoration: InputDecoration(
                   labelText: 'Nama Agenda/Tugas',
                   prefixIcon: const Icon(LucideIcons.type),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
               const SizedBox(height: 12),
@@ -367,17 +461,20 @@ class ArchiveDetailController extends GetxController {
                 decoration: InputDecoration(
                   labelText: 'Tanggal',
                   prefixIcon: const Icon(LucideIcons.calendarDays),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 onTap: () async {
                   final picked = await showDatePicker(
                     context: context,
-                    initialDate: DateTime.tryParse(dateController.text) ?? DateTime.now(),
+                    initialDate: DateTime.tryParse(dateController.text) ??
+                        DateTime.now(),
                     firstDate: DateTime(2000),
                     lastDate: DateTime(2100),
                   );
                   if (picked != null) {
-                    dateController.text = picked.toIso8601String().split('T')[0];
+                    dateController.text =
+                        picked.toIso8601String().split('T')[0];
                   }
                 },
               ),
@@ -388,7 +485,8 @@ class ArchiveDetailController extends GetxController {
                 decoration: InputDecoration(
                   labelText: 'Waktu',
                   prefixIcon: const Icon(LucideIcons.clock),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 onTap: () async {
                   final picked = await showTimePicker(
@@ -408,7 +506,8 @@ class ArchiveDetailController extends GetxController {
                 decoration: InputDecoration(
                   labelText: 'Lokasi',
                   prefixIcon: const Icon(LucideIcons.mapPin),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ],
@@ -421,8 +520,10 @@ class ArchiveDetailController extends GetxController {
           ),
           ElevatedButton(
             onPressed: () async {
-              if (taskController.text.trim().isEmpty || dateController.text.trim().isEmpty) {
-                Get.snackbar('Error', 'Nama agenda dan tanggal wajib diisi.', snackPosition: SnackPosition.BOTTOM);
+              if (taskController.text.trim().isEmpty ||
+                  dateController.text.trim().isEmpty) {
+                Get.snackbar('Error', 'Nama agenda dan tanggal wajib diisi.',
+                    snackPosition: SnackPosition.BOTTOM);
                 return;
               }
               Get.back();
@@ -436,19 +537,20 @@ class ArchiveDetailController extends GetxController {
                   docId: document.id,
                 );
                 if (result != null) {
-                  final isCalendarSyncOk = result['google_calendar_success'] ?? true;
+                  final isCalendarSyncOk =
+                      result['google_calendar_success'] ?? true;
                   if (isCalendarSyncOk) {
                     Get.snackbar(
-                      'Berhasil', 
-                      'Pengingat berhasil disimpan & disinkronkan ke Google Calendar!', 
+                      'Berhasil',
+                      'Pengingat berhasil disimpan & disinkronkan ke Google Calendar!',
                       snackPosition: SnackPosition.BOTTOM,
                       backgroundColor: Colors.green.withOpacity(0.9),
                       colorText: Colors.white,
                     );
                   } else {
                     Get.snackbar(
-                      'Penyimpanan Berhasil dengan Peringatan', 
-                      'Pengingat disimpan di sistem lokal, tetapi gagal disinkronkan ke Google Calendar Anda. Hubungkan ulang akun Google Anda untuk memperbarui izin.', 
+                      'Penyimpanan Berhasil dengan Peringatan',
+                      'Pengingat disimpan di sistem lokal, tetapi gagal disinkronkan ke Google Calendar Anda. Hubungkan ulang akun Google Anda untuk memperbarui izin.',
                       snackPosition: SnackPosition.BOTTOM,
                       backgroundColor: Colors.orange.withOpacity(0.9),
                       colorText: Colors.white,
@@ -456,7 +558,8 @@ class ArchiveDetailController extends GetxController {
                     );
                   }
                 } else {
-                  Get.snackbar('Gagal', 'Gagal membuat pengingat.', snackPosition: SnackPosition.BOTTOM);
+                  Get.snackbar('Gagal', 'Gagal membuat pengingat.',
+                      snackPosition: SnackPosition.BOTTOM);
                 }
               } catch (e) {
                 print("Create reminder UI error: $e");
@@ -466,9 +569,11 @@ class ArchiveDetailController extends GetxController {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Simpan & Sinkron', style: TextStyle(color: Colors.white)),
+            child: const Text('Simpan & Sinkron',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -477,13 +582,14 @@ class ArchiveDetailController extends GetxController {
 
   Future<void> suggestAndShowDispositionDialog(BuildContext context) async {
     if (delegations.isEmpty) {
-      Get.snackbar('Disposisi', 'Belum ada divisi yang dibuat. Buat divisi di halaman Profil terlebih dahulu.',
+      Get.snackbar('Disposisi',
+          'Belum ada divisi yang dibuat. Buat divisi di halaman Profil terlebih dahulu.',
           backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
       return;
     }
 
     isAnalyzingDisposition.value = true;
-    
+
     // Show loading dialog
     Get.dialog(
       const Center(
@@ -495,7 +601,8 @@ class ArchiveDetailController extends GetxController {
               children: [
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
-                Text('AI sedang menganalisis tujuan disposisi...', style: TextStyle(fontWeight: FontWeight.w500)),
+                Text('AI sedang menganalisis tujuan disposisi...',
+                    style: TextStyle(fontWeight: FontWeight.w500)),
               ],
             ),
           ),
@@ -509,15 +616,16 @@ class ArchiveDetailController extends GetxController {
       // Get document full detail for full text content
       final detail = await apiService.getDocumentDetail(document.id);
       final contentText = detail?['content'] ?? document.summary;
-      
-      final delegationNames = delegations.map((d) => d['name'].toString()).toList();
+
+      final delegationNames =
+          delegations.map((d) => d['name'].toString()).toList();
       res = await apiService.suggestDisposition(contentText, delegationNames);
     } catch (e) {
       print("Suggest disposition error: $e");
     } finally {
       isAnalyzingDisposition.value = false;
     }
-    
+
     Get.back(); // Close loading dialog
 
     if (res != null) {
@@ -527,11 +635,12 @@ class ArchiveDetailController extends GetxController {
       aiSuggestedDelegation.value = '';
       aiSuggestedReason.value = '';
     }
-    
+
     // Open disposition select dialog
     String? selectedDelId;
     if (aiSuggestedDelegation.value.isNotEmpty) {
-      final matchedDel = delegations.firstWhereOrNull((d) => d['name'] == aiSuggestedDelegation.value);
+      final matchedDel = delegations
+          .firstWhereOrNull((d) => d['name'] == aiSuggestedDelegation.value);
       if (matchedDel != null) {
         selectedDelId = matchedDel['_id'];
       }
@@ -545,14 +654,19 @@ class ArchiveDetailController extends GetxController {
         title: Row(
           children: [
             Icon(
-              aiSuggestedDelegation.value.isNotEmpty ? LucideIcons.sparkles : LucideIcons.send, 
-              color: aiSuggestedDelegation.value.isNotEmpty ? AppTheme.aiAccent : AppTheme.primary
-            ),
+                aiSuggestedDelegation.value.isNotEmpty
+                    ? LucideIcons.sparkles
+                    : LucideIcons.send,
+                color: aiSuggestedDelegation.value.isNotEmpty
+                    ? AppTheme.aiAccent
+                    : AppTheme.primary),
             const SizedBox(width: 8),
             Text(
-              aiSuggestedDelegation.value.isNotEmpty ? 'Rekomendasi Disposisi AI' : 'Disposisi Surat Manual', 
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)
-            ),
+                aiSuggestedDelegation.value.isNotEmpty
+                    ? 'Rekomendasi Disposisi AI'
+                    : 'Disposisi Surat Manual',
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           ],
         ),
         content: SingleChildScrollView(
@@ -561,62 +675,79 @@ class ArchiveDetailController extends GetxController {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (aiSuggestedDelegation.value.isNotEmpty) ...[
-                const Text('AI menyarankan surat ini didisposisikan ke divisi berikut:', style: TextStyle(fontSize: 12, color: AppTheme.outline)),
+                const Text(
+                    'AI menyarankan surat ini didisposisikan ke divisi berikut:',
+                    style: TextStyle(fontSize: 12, color: AppTheme.outline)),
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: AppTheme.aiSoft,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.aiAccent.withOpacity(0.2)),
+                    border:
+                        Border.all(color: AppTheme.aiAccent.withOpacity(0.2)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         aiSuggestedDelegation.value.toUpperCase(),
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.aiAccent),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: AppTheme.aiAccent),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         aiSuggestedReason.value,
-                        style: const TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant, height: 1.4),
+                        style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.onSurfaceVariant,
+                            height: 1.4),
                       ),
                     ],
                   ),
                 ),
               ] else ...[
                 const Text(
-                  'Rekomendasi AI tidak tersedia. Silakan pilih divisi penerima secara manual untuk mendisposisikan surat ini:', 
-                  style: TextStyle(fontSize: 13, color: AppTheme.onSurfaceVariant, height: 1.4)
-                ),
+                    'Rekomendasi AI tidak tersedia. Silakan pilih divisi penerima secara manual untuk mendisposisikan surat ini:',
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.onSurfaceVariant,
+                        height: 1.4)),
               ],
               const SizedBox(height: 20),
-              const Text('Pilih Divisi Penerima Konfirmasi:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.onSurface)),
+              const Text('Pilih Divisi Penerima Konfirmasi:',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.onSurface)),
               const SizedBox(height: 8),
               Obx(() => DropdownButtonFormField<String>(
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-                value: selectedDelIdObs.value,
-                hint: const Text('Pilih Divisi'),
-                items: [
-                  const DropdownMenuItem<String>(
-                    value: 'general',
-                    child: Text('General (Semua Tanpa Divisi)'),
-                  ),
-                  ...delegations.map((d) {
-                    return DropdownMenuItem<String>(
-                      value: d['_id'],
-                      child: Text(d['name'] ?? ''),
-                    );
-                  }).toList(),
-                ],
-                onChanged: (val) {
-                  selectedDelIdObs.value = val;
-                },
-              )),
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                    ),
+                    value: selectedDelIdObs.value,
+                    hint: const Text('Pilih Divisi'),
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: 'general',
+                        child: Text('General (Semua Tanpa Divisi)'),
+                      ),
+                      ...delegations.map((d) {
+                        return DropdownMenuItem<String>(
+                          value: d['_id'],
+                          child: Text(d['name'] ?? ''),
+                        );
+                      }).toList(),
+                    ],
+                    onChanged: (val) {
+                      selectedDelIdObs.value = val;
+                    },
+                  )),
             ],
           ),
         ),
@@ -628,13 +759,15 @@ class ArchiveDetailController extends GetxController {
           ElevatedButton(
             onPressed: () async {
               if (selectedDelIdObs.value == null) {
-                Get.snackbar('Error', 'Silakan pilih divisi penerima.', snackPosition: SnackPosition.BOTTOM);
+                Get.snackbar('Error', 'Silakan pilih divisi penerima.',
+                    snackPosition: SnackPosition.BOTTOM);
                 return;
               }
               Get.back();
               isLoading.value = true;
               try {
-                final success = await apiService.dispositionDocument(document.id, selectedDelIdObs.value!);
+                final success = await apiService.dispositionDocument(
+                    document.id, selectedDelIdObs.value!);
                 if (success) {
                   Get.snackbar(
                     'Sukses Disposisi',
@@ -645,7 +778,8 @@ class ArchiveDetailController extends GetxController {
                   );
                   await fetchDetailedData(); // Refresh details page
                 } else {
-                  Get.snackbar('Gagal', 'Gagal memproses disposisi.', snackPosition: SnackPosition.BOTTOM);
+                  Get.snackbar('Gagal', 'Gagal memproses disposisi.',
+                      snackPosition: SnackPosition.BOTTOM);
                 }
               } catch (e) {
                 print("Submit disposition error: $e");
@@ -662,9 +796,12 @@ class ArchiveDetailController extends GetxController {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Kirim ke Divisi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text('Kirim ke Divisi',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

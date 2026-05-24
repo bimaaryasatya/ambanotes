@@ -188,6 +188,46 @@ class ProfileView extends GetView<ProfileController> {
   Widget _buildGoogleDriveCard() {
     final connected = controller.isDriveConnected.value;
     final migrating = controller.isMigrating.value;
+    final isOwner = controller.apiService.isOwner;
+
+    if (!isOwner) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.5)),
+        ),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(LucideIcons.hardDrive, color: AppTheme.primary),
+                SizedBox(width: 8),
+                Text(
+                  "Integrasi Cloud Storage",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            Text(
+              "Penyimpanan Google Drive organisasi dikelola oleh pemilik organisasi. Dokumen yang Anda unggah tetap aman dan hanya dapat diakses sesuai hak akses Anda, sementara file fisik disimpan secara terpusat di Google Drive owner.",
+              style: TextStyle(
+                fontSize: 13,
+                color: AppTheme.onSurfaceVariant,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -331,7 +371,6 @@ class ProfileView extends GetView<ProfileController> {
     );
   }
 
-
   // ─────────────────────────────────────────────────────────────────────────
   //  GENERAL SETTINGS
   // ─────────────────────────────────────────────────────────────────────────
@@ -393,5 +432,4 @@ class ProfileView extends GetView<ProfileController> {
       ),
     );
   }
-
 }

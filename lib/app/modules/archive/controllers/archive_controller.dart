@@ -1,3 +1,4 @@
+import 'package:ambanotes/app/routes/app_pages.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:ambanotes/app/data/models/models.dart';
@@ -8,11 +9,13 @@ class ArchiveController extends GetxController {
 
   final documents = <Document>[].obs;
   final isLoading = false.obs;
-  
+
   final searchQuery = ''.obs;
   final selectedCategory = 'All Documents'.obs;
-  final sortOrder = 'date_desc'.obs; 
+  final sortOrder = 'date_desc'.obs;
   final isSemanticSearchEnabled = false.obs;
+  final selectedDocIds = <String>{}.obs;
+  final isSelectionMode = false.obs;
 
   @override
   void onInit() {
@@ -37,18 +40,21 @@ class ArchiveController extends GetxController {
           size: '1.2 MB',
         ));
       }
-      
+
       // Inject dummy invitation document for testing Surat Tugas feature
-      parsed.insert(0, Document(
-        id: 'dummy_invitation_001',
-        title: 'Undangan Rapat Koordinasi Wilayah',
-        summary: 'Kami mengundang Bapak/Ibu untuk menghadiri rapat koordinasi wilayah pada hari Senin, 20 Oktober 2026 pukul 09:00 WIB bertempat di Ruang Rapat Utama Balai Kota Jakarta.',
-        status: 'processed',
-        type: 'Undangan',
-        archivedDate: DateTime.now().toIso8601String(),
-        size: '450 KB',
-      ));
-      
+      parsed.insert(
+          0,
+          Document(
+            id: 'dummy_invitation_001',
+            title: 'Undangan Rapat Koordinasi Wilayah',
+            summary:
+                'Kami mengundang Bapak/Ibu untuk menghadiri rapat koordinasi wilayah pada hari Senin, 20 Oktober 2026 pukul 09:00 WIB bertempat di Ruang Rapat Utama Balai Kota Jakarta.',
+            status: 'processed',
+            type: 'Undangan',
+            archivedDate: DateTime.now().toIso8601String(),
+            size: '450 KB',
+          ));
+
       documents.assignAll(parsed);
     } catch (e) {
       print("Fetch documents error: $e");
@@ -64,13 +70,27 @@ class ArchiveController extends GetxController {
     if (selectedCategory.value != 'All Documents') {
       String targetType = '';
       switch (selectedCategory.value) {
-        case 'Letters': targetType = 'surat_masuk'; break;
-        case 'Invitations': targetType = 'undangan'; break;
-        case 'Contracts': targetType = 'kontrak'; break;
-        case 'Reports': targetType = 'laporan'; break;
+        case 'Letters':
+          targetType = 'surat_masuk';
+          break;
+        case 'Invitations':
+          targetType = 'undangan';
+          break;
+        case 'Contracts':
+          targetType = 'kontrak';
+          break;
+        case 'Reports':
+          targetType = 'laporan';
+          break;
       }
       if (targetType.isNotEmpty) {
-        result = result.where((doc) => doc.type.toLowerCase() == targetType || doc.type.toLowerCase().contains(selectedCategory.value.substring(0, selectedCategory.value.length - 1).toLowerCase())).toList();
+        result = result
+            .where((doc) =>
+                doc.type.toLowerCase() == targetType ||
+                doc.type.toLowerCase().contains(selectedCategory.value
+                    .substring(0, selectedCategory.value.length - 1)
+                    .toLowerCase()))
+            .toList();
       }
     }
 
@@ -78,8 +98,8 @@ class ArchiveController extends GetxController {
     if (searchQuery.value.isNotEmpty) {
       final query = searchQuery.value.toLowerCase();
       result = result.where((doc) {
-        return doc.title.toLowerCase().contains(query) || 
-               doc.summary.toLowerCase().contains(query);
+        return doc.title.toLowerCase().contains(query) ||
+            doc.summary.toLowerCase().contains(query);
       }).toList();
     }
 
@@ -113,7 +133,7 @@ class ArchiveController extends GetxController {
     try {
       final results = await apiService.semanticSearch(searchQuery.value);
       final List<Document> matchedDocs = [];
-      
+
       // Match semantic search results (which return doc_id and filename) with our local detailed documents
       for (var item in results) {
         final docId = item['doc_id'];
@@ -122,7 +142,7 @@ class ArchiveController extends GetxController {
           matchedDocs.add(match);
         }
       }
-      
+
       if (matchedDocs.isNotEmpty) {
         documents.assignAll(matchedDocs);
         Get.snackbar(
@@ -163,19 +183,19 @@ class ArchiveController extends GetxController {
   // --- ACTIONS ---
 
   void deleteDocument(Document doc) async {
-    final confirmed = await Get.dialog<bool>(
-      AlertDialog(
-        title: const Text('Confirm Delete'),
-        content: Text('Are you sure you want to delete ${doc.title}?'),
-        actions: [
-          TextButton(onPressed: () => Get.back(result: false), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Get.back(result: true), 
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      )
-    );
+    final confirmed = await Get.dialog<bool>(AlertDialog(
+      title: const Text('Confirm Delete'),
+      content: Text('Are you sure you want to delete ${doc.title}?'),
+      actions: [
+        TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Get.back(result: true),
+          child: const Text('Delete', style: TextStyle(color: Colors.red)),
+        ),
+      ],
+    ));
 
     if (confirmed == true) {
       isLoading.value = true;
@@ -203,14 +223,64 @@ class ArchiveController extends GetxController {
     }
   }
 
+  void enterSelectionMode(String id) {
+    isSelectionMode.value = true;
+    selectedDocIds.add(id);
+  }
+
+  void toggleSelection(String id) {
+    if (selectedDocIds.contains(id)) {
+      selectedDocIds.remove(id);
+    } else {
+      selectedDocIds.add(id);
+    }
+
+    if (selectedDocIds.isEmpty) {
+      isSelectionMode.value = false;
+    }
+  }
+
+  void clearSelection() {
+    selectedDocIds.clear();
+    isSelectionMode.value = false;
+  }
+
+  Future<void> deleteSelectedDocuments() async {
+    final ids = selectedDocIds.toList();
+
+    if (ids.isEmpty) {
+      clearSelection();
+      return;
+    }
+
+    isLoading.value = true;
+
+    try {
+      for (final id in ids) {
+        await apiService.deleteDocument(id);
+      }
+
+      clearSelection();
+      await fetchDocuments();
+
+      Get.snackbar(
+        'Berhasil',
+        'Dokumen terpilih berhasil dihapus.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Gagal',
+        'Gagal menghapus dokumen terpilih: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   void replaceDocument(Document doc) {
-    Get.snackbar(
-      'Replace Feature',
-      'Please upload a new scan or edit the document details directly.',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.blue.withOpacity(0.8),
-      colorText: Colors.white,
-    );
+    Get.toNamed(Routes.REPLACE, arguments: doc);
   }
 
   void editDocument(Document doc) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 
 class ApiService extends GetxService {
   // Using local computer IP address so both Android Emulator AND physical phones can access it
@@ -516,6 +517,56 @@ class ApiService extends GetxService {
     return null;
   }
 
+  Future<List<int>?> downloadDocumentBytes(String docId) async {
+    try {
+      final uri = Uri.parse('${baseUrl.value}/document/download/$docId');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          if (token.value != null) 'Authorization': 'Bearer ${token.value}',
+        },
+      );
+
+      debugPrint('[DEBUG downloadDocumentBytes] status=${response.statusCode}');
+      debugPrint(
+          '[DEBUG downloadDocumentBytes] content-type=${response.headers['content-type']}');
+      debugPrint(
+          '[DEBUG downloadDocumentBytes] bytes=${response.bodyBytes.length}');
+      debugPrint(
+          '[DEBUG downloadDocumentBytes] body preview=${response.body.length > 100 ? response.body.substring(0, 100) : response.body}');
+
+      if (response.statusCode == 200) {
+        if (response.bodyBytes.isNotEmpty) {
+          return response.bodyBytes;
+        }
+
+        Get.snackbar(
+          'Download Error',
+          'Response berhasil, tetapi file kosong.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return null;
+      }
+
+      Get.snackbar(
+        'Download Error',
+        response.body.isNotEmpty
+            ? response.body
+            : 'Gagal mengunduh dokumen. Status: ${response.statusCode}',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Download Error',
+        'Gagal mengunduh dokumen: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+
+    return null;
+  }
+
   Future<bool> deleteDocument(String docId) async {
     try {
       final response = await _delete('/document/$docId');
@@ -563,7 +614,7 @@ class ApiService extends GetxService {
         return null;
       }
 
-      final response = await _post('/document/replace/$docId', payload);
+      final response = await _put('/document/replace/$docId', payload);
       if (response.statusCode == 200) {
         return response.body as Map<String, dynamic>;
       }

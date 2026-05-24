@@ -21,6 +21,8 @@ import 'package:ambanotes/app/modules/register/bindings/register_binding.dart';
 import 'package:ambanotes/app/modules/register/views/register_view.dart';
 import 'package:ambanotes/app/modules/forgot_password/views/forgot_password_view.dart';
 import 'package:ambanotes/app/modules/forgot_password/controllers/forgot_password_controller.dart';
+import 'package:ambanotes/app/modules/replace/bindings/replace_binding.dart';
+import 'package:ambanotes/app/modules/replace/views/replace_view.dart';
 
 part 'app_routes.dart';
 
@@ -86,6 +88,11 @@ class AppPages {
       binding: BindingsBuilder(() {
         Get.lazyPut<ForgotPasswordController>(() => ForgotPasswordController());
       }),
+    ),
+    GetPage(
+      name: _Paths.REPLACE,
+      page: () => const ReplaceView(),
+      binding: ReplaceBinding(),
     ),
   ];
 }

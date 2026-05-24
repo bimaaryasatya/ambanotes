@@ -16,7 +16,31 @@ class ArchiveView extends GetView<ArchiveController> {
       backgroundColor: AppTheme.surface,
       bottomNavigationBar: const CustomBottomNavBar(currentIndex: 1),
       appBar: AppBar(
-        title: const Text("Document Archive"),
+        title: Obx(() {
+          if (controller.isSelectionMode.value) {
+            return Text('${controller.selectedDocIds.length} dipilih');
+          }
+          return const Text("Document Archive");
+        }),
+        actions: [
+          Obx(() {
+            if (!controller.isSelectionMode.value)
+              return const SizedBox.shrink();
+
+            return Row(
+              children: [
+                IconButton(
+                  icon: const Icon(LucideIcons.trash2, color: Colors.red),
+                  onPressed: controller.deleteSelectedDocuments,
+                ),
+                IconButton(
+                  icon: const Icon(LucideIcons.x),
+                  onPressed: controller.clearSelection,
+                ),
+              ],
+            );
+          }),
+        ],
       ),
       body: Column(
         children: [
@@ -72,7 +96,8 @@ class ArchiveView extends GetView<ArchiveController> {
                 color: AppTheme.aiSoft.withOpacity(0.8),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(LucideIcons.sparkles, size: 18, color: AppTheme.aiAccent),
+              child: const Icon(LucideIcons.sparkles,
+                  size: 18, color: AppTheme.aiAccent),
             ),
           ),
           GestureDetector(
@@ -83,7 +108,8 @@ class ArchiveView extends GetView<ArchiveController> {
                 color: AppTheme.surface,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(LucideIcons.sliders, size: 18, color: AppTheme.secondary),
+              child: const Icon(LucideIcons.sliders,
+                  size: 18, color: AppTheme.secondary),
             ),
           )
         ],
@@ -92,7 +118,13 @@ class ArchiveView extends GetView<ArchiveController> {
   }
 
   Widget _buildCategoryFilters() {
-    final categories = ['All Documents', 'Letters', 'Invitations', 'Contracts', 'Reports'];
+    final categories = [
+      'All Documents',
+      'Letters',
+      'Invitations',
+      'Contracts',
+      'Reports'
+    ];
     return SizedBox(
       height: 40,
       child: ListView.builder(
@@ -101,7 +133,8 @@ class ArchiveView extends GetView<ArchiveController> {
         itemCount: categories.length,
         itemBuilder: (context, index) {
           return Obx(() {
-            final isSelected = controller.selectedCategory.value == categories[index];
+            final isSelected =
+                controller.selectedCategory.value == categories[index];
             return GestureDetector(
               onTap: () => controller.selectCategory(categories[index]),
               child: Container(
@@ -116,9 +149,12 @@ class ArchiveView extends GetView<ArchiveController> {
                     ),
                   ),
                   backgroundColor: isSelected ? AppTheme.primary : Colors.white,
-                  side: isSelected ? BorderSide.none : const BorderSide(color: AppTheme.outlineVariant),
+                  side: isSelected
+                      ? BorderSide.none
+                      : const BorderSide(color: AppTheme.outlineVariant),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
                 ),
               ),
             );
@@ -133,7 +169,8 @@ class ArchiveView extends GetView<ArchiveController> {
       final filteredDocs = controller.filteredDocuments;
       if (filteredDocs.isEmpty) {
         return const Center(
-          child: Text('No documents found.', style: TextStyle(color: AppTheme.outline)),
+          child: Text('No documents found.',
+              style: TextStyle(color: AppTheme.outline)),
         );
       }
       return ListView.builder(
@@ -149,15 +186,18 @@ class ArchiveView extends GetView<ArchiveController> {
 
   Widget _buildDocumentItem(Document doc) {
     final isProcessing = doc.status == 'processing';
+    final isSelected = controller.selectedDocIds.contains(doc.id);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isSelected ? AppTheme.primary.withOpacity(0.08) : Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isProcessing 
-              ? AppTheme.primary.withOpacity(0.3) 
-              : AppTheme.outlineVariant.withOpacity(0.2)
+          color: isSelected
+              ? AppTheme.primary
+              : isProcessing
+                  ? AppTheme.primary.withOpacity(0.3)
+                  : AppTheme.outlineVariant.withOpacity(0.2),
         ),
         boxShadow: [
           BoxShadow(
@@ -170,9 +210,20 @@ class ArchiveView extends GetView<ArchiveController> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: isProcessing 
-              ? () => Get.snackbar('Sedang Diproses', 'Dokumen sedang dianalisis oleh AI di latar belakang. Silakan tunggu.', snackPosition: SnackPosition.BOTTOM)
-              : () => Get.toNamed(Routes.ARCHIVE_DETAIL, arguments: doc),
+          onTap: () {
+            if (controller.isSelectionMode.value) {
+              controller.toggleSelection(doc.id);
+            } else if (isProcessing) {
+              Get.snackbar(
+                'Sedang Diproses',
+                'Dokumen sedang dianalisis oleh AI di latar belakang. Silakan tunggu.',
+                snackPosition: SnackPosition.BOTTOM,
+              );
+            } else {
+              Get.toNamed(Routes.ARCHIVE_DETAIL, arguments: doc);
+            }
+          },
+          onLongPress: () => controller.enterSelectionMode(doc.id),
           borderRadius: BorderRadius.circular(24),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -183,19 +234,23 @@ class ArchiveView extends GetView<ArchiveController> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: isProcessing ? AppTheme.primary.withOpacity(0.05) : AppTheme.surface,
+                    color: isProcessing
+                        ? AppTheme.primary.withOpacity(0.05)
+                        : AppTheme.surface,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: isProcessing 
+                  child: isProcessing
                       ? const SizedBox(
                           width: 20,
                           height: 20,
                           child: Padding(
                             padding: EdgeInsets.all(14.0),
-                            child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: AppTheme.primary),
                           ),
                         )
-                      : const Icon(LucideIcons.fileText, color: AppTheme.secondary),
+                      : const Icon(LucideIcons.fileText,
+                          color: AppTheme.secondary),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -218,20 +273,24 @@ class ArchiveView extends GetView<ArchiveController> {
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: isProcessing 
-                                  ? AppTheme.primary.withOpacity(0.1) 
+                              color: isProcessing
+                                  ? AppTheme.primary.withOpacity(0.1)
                                   : AppTheme.outlineVariant.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              isProcessing ? 'PROCESSING' : doc.type.toUpperCase(),
+                              isProcessing
+                                  ? 'PROCESSING'
+                                  : doc.type.toUpperCase(),
                               style: TextStyle(
-                                fontSize: 8, 
-                                fontWeight: FontWeight.bold, 
-                                color: isProcessing ? AppTheme.primary : AppTheme.outline
-                              ),
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                  color: isProcessing
+                                      ? AppTheme.primary
+                                      : AppTheme.outline),
                             ),
                           ),
                         ],
@@ -240,33 +299,36 @@ class ArchiveView extends GetView<ArchiveController> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: isProcessing 
-                              ? AppTheme.primary.withOpacity(0.05) 
+                          color: isProcessing
+                              ? AppTheme.primary.withOpacity(0.05)
                               : AppTheme.aiSoft.withOpacity(0.5),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: isProcessing 
-                                ? AppTheme.primary.withOpacity(0.1) 
-                                : AppTheme.aiAccent.withOpacity(0.1)
-                          ),
+                              color: isProcessing
+                                  ? AppTheme.primary.withOpacity(0.1)
+                                  : AppTheme.aiAccent.withOpacity(0.1)),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Icon(
-                              isProcessing ? LucideIcons.loader : LucideIcons.sparkles, 
-                              size: 12, 
-                              color: isProcessing ? AppTheme.primary : AppTheme.aiAccent
-                            ),
+                                isProcessing
+                                    ? LucideIcons.loader
+                                    : LucideIcons.sparkles,
+                                size: 12,
+                                color: isProcessing
+                                    ? AppTheme.primary
+                                    : AppTheme.aiAccent),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
                                 doc.summary,
                                 style: TextStyle(
-                                  fontSize: 11, 
-                                  color: isProcessing ? AppTheme.primary : AppTheme.onSurfaceVariant, 
-                                  fontStyle: FontStyle.italic
-                                ),
+                                    fontSize: 11,
+                                    color: isProcessing
+                                        ? AppTheme.primary
+                                        : AppTheme.onSurfaceVariant,
+                                    fontStyle: FontStyle.italic),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -289,17 +351,18 @@ class ArchiveView extends GetView<ArchiveController> {
                                 Text(
                                   doc.archivedDate,
                                   style: const TextStyle(
-                                    fontSize: 10, 
-                                    color: AppTheme.outline, 
-                                    fontWeight: FontWeight.w500
-                                  ),
+                                      fontSize: 10,
+                                      color: AppTheme.outline,
+                                      fontWeight: FontWeight.w500),
                                 ),
                               ],
                             ),
                           ),
-                          if (!isProcessing)
+                          if (!isProcessing &&
+                              !controller.isSelectionMode.value)
                             PopupMenuButton<String>(
-                              icon: const Icon(LucideIcons.moreVertical, size: 18, color: AppTheme.outline),
+                              icon: const Icon(LucideIcons.moreVertical,
+                                  size: 18, color: AppTheme.outline),
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
                               onSelected: (value) {
@@ -311,7 +374,8 @@ class ArchiveView extends GetView<ArchiveController> {
                                   controller.replaceDocument(doc);
                                 }
                               },
-                              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                              itemBuilder: (BuildContext context) =>
+                                  <PopupMenuEntry<String>>[
                                 const PopupMenuItem<String>(
                                   value: 'edit',
                                   child: Text('Edit'),
@@ -322,7 +386,8 @@ class ArchiveView extends GetView<ArchiveController> {
                                 ),
                                 const PopupMenuItem<String>(
                                   value: 'delete',
-                                  child: Text('Delete', style: TextStyle(color: Colors.red)),
+                                  child: Text('Delete',
+                                      style: TextStyle(color: Colors.red)),
                                 ),
                               ],
                             ),
@@ -342,11 +407,11 @@ class ArchiveView extends GetView<ArchiveController> {
   Widget _buildStatusBadge(String status) {
     final isApproved = status == 'Approved';
     final isProcessing = status == 'processing';
-    
+
     Color badgeColor = AppTheme.secondaryContainer.withOpacity(0.3);
     Color textColor = AppTheme.onSecondaryContainer;
     Widget? icon;
-    
+
     if (isApproved) {
       badgeColor = Colors.green.withOpacity(0.1);
       textColor = Colors.green;
@@ -354,9 +419,10 @@ class ArchiveView extends GetView<ArchiveController> {
     } else if (isProcessing) {
       badgeColor = AppTheme.primary.withOpacity(0.1);
       textColor = AppTheme.primary;
-      icon = const Icon(LucideIcons.hourglass, size: 10, color: AppTheme.primary);
+      icon =
+          const Icon(LucideIcons.hourglass, size: 10, color: AppTheme.primary);
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
@@ -382,6 +448,4 @@ class ArchiveView extends GetView<ArchiveController> {
       ),
     );
   }
-
-
 }
