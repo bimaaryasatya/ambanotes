@@ -8,14 +8,17 @@ import 'package:ambanotes/app/widgets/custom_bottom_navbar.dart';
 import 'security_view.dart';
 import 'notification_settings_view.dart';
 import 'manage_enterprise_view.dart';
+import 'activity_log_view.dart';
+import 'help_center_view.dart';
 
 class ProfileView extends GetView<ProfileController> {
   const ProfileView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final scaffoldColor = Theme.of(context).scaffoldBackgroundColor;
     return Scaffold(
-      backgroundColor: AppTheme.surface,
+      backgroundColor: scaffoldColor,
       appBar: AppBar(
         title: const Text("Pengaturan & Profil",
             style: TextStyle(
@@ -392,6 +395,10 @@ class ProfileView extends GetView<ProfileController> {
             onTap: () => Get.to(() => const NotificationSettingsView()),
           ),
           const Divider(height: 24),
+          Obx(
+            () => _buildThemeToggleRow(),
+          ),
+          const Divider(height: 24),
           _buildSettingsRow(
             LucideIcons.shieldAlert,
             "Keamanan & Sandi",
@@ -406,7 +413,20 @@ class ProfileView extends GetView<ProfileController> {
             ),
             const Divider(height: 24),
           ],
-          _buildSettingsRow(LucideIcons.helpCircle, "Pusat Bantuan AmbaNotes"),
+          _buildSettingsRow(
+            LucideIcons.history,
+            "Log Aktivitas",
+            onTap: () {
+              controller.fetchActivityLogs();
+              Get.to(() => const ActivityLogView());
+            },
+          ),
+          const Divider(height: 24),
+          _buildSettingsRow(
+            LucideIcons.helpCircle,
+            "Pusat Bantuan AmbaNotes",
+            onTap: () => Get.to(() => const HelpCenterView()),
+          ),
         ],
       ),
     );
@@ -430,6 +450,29 @@ class ProfileView extends GetView<ProfileController> {
               size: 16, color: AppTheme.outlineVariant),
         ],
       ),
+    );
+  }
+
+  Widget _buildThemeToggleRow() {
+    return Row(
+      children: [
+        const Icon(LucideIcons.moonStar, size: 20, color: AppTheme.primary),
+        const SizedBox(width: 12),
+        const Text(
+          "Dark Mode",
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.onSurface,
+          ),
+        ),
+        const Spacer(),
+        Switch(
+          value: controller.themeService.isDarkMode.value,
+          activeColor: AppTheme.primary,
+          onChanged: controller.themeService.toggleTheme,
+        ),
+      ],
     );
   }
 }

@@ -2,10 +2,15 @@ import 'package:ambanotes/app/routes/app_pages.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:ambanotes/app/data/models/models.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import '../../../theme/app_theme.dart';
+import '../../../data/services/backup_registry_service.dart';
 import '../../../data/services/api_service.dart';
+import '../../../utils/document_backup_helper.dart';
 
 class ArchiveController extends GetxController {
   final apiService = Get.find<ApiService>();
+  final backupRegistry = Get.find<BackupRegistryService>();
 
   final documents = <Document>[].obs;
   final isLoading = false.obs;
@@ -38,6 +43,8 @@ class ArchiveController extends GetxController {
           type: classification['label_name'] ?? 'Letter',
           archivedDate: item['uploaded_at'] ?? 'Unknown',
           size: '1.2 MB',
+          delegationId: item['delegation_id'] ?? 'general',
+          delegationName: item['delegation_name'] ?? 'General',
         ));
       }
 
@@ -53,6 +60,8 @@ class ArchiveController extends GetxController {
             type: 'Undangan',
             archivedDate: DateTime.now().toIso8601String(),
             size: '450 KB',
+            delegationId: 'general',
+            delegationName: 'General',
           ));
 
       documents.assignAll(parsed);
@@ -110,9 +119,18 @@ class ArchiveController extends GetxController {
       } else if (sortOrder.value == 'title_desc') {
         return b.title.compareTo(a.title);
       } else if (sortOrder.value == 'date_asc') {
-        return a.archivedDate.compareTo(b.archivedDate);
+        return _parseArchivedDate(a.archivedDate)
+            .compareTo(_parseArchivedDate(b.archivedDate));
+      } else if (sortOrder.value == 'delegation_asc') {
+        final delegationCompare = a.delegationName
+            .toLowerCase()
+            .compareTo(b.delegationName.toLowerCase());
+        return delegationCompare != 0
+            ? delegationCompare
+            : a.title.toLowerCase().compareTo(b.title.toLowerCase());
       } else {
-        return b.archivedDate.compareTo(a.archivedDate);
+        return _parseArchivedDate(b.archivedDate)
+            .compareTo(_parseArchivedDate(a.archivedDate));
       }
     });
 
@@ -180,33 +198,106 @@ class ArchiveController extends GetxController {
     }
   }
 
+  void setSortOrder(String value) {
+    sortOrder.value = value;
+  }
+
+  String get sortLabel {
+    switch (sortOrder.value) {
+      case 'date_asc':
+        return 'Terlama';
+      case 'title_asc':
+        return 'Nama A-Z';
+      case 'title_desc':
+        return 'Nama Z-A';
+      case 'delegation_asc':
+        return 'Divisi A-Z';
+      default:
+        return 'Terbaru';
+    }
+  }
+
+  void showSortOptions() {
+    Get.bottomSheet(
+      SafeArea(
+        top: false,
+        child: Container(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            28 + MediaQuery.of(Get.context!).padding.bottom,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(28),
+              topRight: Radius.circular(28),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Urutkan Dokumen',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              ...[
+                {'value': 'date_desc', 'label': 'Tanggal Terbaru'},
+                {'value': 'date_asc', 'label': 'Tanggal Terlama'},
+                {'value': 'delegation_asc', 'label': 'Divisi A-Z'},
+                {'value': 'title_asc', 'label': 'Nama A-Z'},
+                {'value': 'title_desc', 'label': 'Nama Z-A'},
+              ].map((option) {
+                final value = option['value']!;
+                final label = option['label']!;
+                return Obx(() {
+                  final selected = sortOrder.value == value;
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      selected ? LucideIcons.checkCircle : LucideIcons.circle,
+                      color: selected ? Colors.teal : Colors.grey,
+                    ),
+                    title: Text(label),
+                    onTap: () {
+                      setSortOrder(value);
+                      Get.back();
+                    },
+                  );
+                });
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // --- ACTIONS ---
 
   void deleteDocument(Document doc) async {
-    final confirmed = await Get.dialog<bool>(AlertDialog(
-      title: const Text('Confirm Delete'),
-      content: Text('Are you sure you want to delete ${doc.title}?'),
-      actions: [
-        TextButton(
-            onPressed: () => Get.back(result: false),
-            child: const Text('Cancel')),
-        TextButton(
-          onPressed: () => Get.back(result: true),
-          child: const Text('Delete', style: TextStyle(color: Colors.red)),
-        ),
-      ],
-    ));
+    final deleteBackup = await _confirmDeleteDocument(doc);
 
-    if (confirmed == true) {
+    if (deleteBackup != null) {
       isLoading.value = true;
       final success = await apiService.deleteDocument(doc.id);
       isLoading.value = false;
 
       if (success) {
+        int deletedBackupCount = 0;
+        if (deleteBackup) {
+          deletedBackupCount = await _deleteRegisteredBackups(doc.id);
+        }
+
         documents.removeWhere((element) => element.id == doc.id);
         Get.snackbar(
           'Document Deleted',
-          '${doc.title} has been removed successfully.',
+          deletedBackupCount > 0
+              ? '${doc.title} dihapus bersama $deletedBackupCount file cadangan.'
+              : '${doc.title} has been removed successfully.',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.redAccent.withOpacity(0.8),
           colorText: Colors.white,
@@ -224,16 +315,22 @@ class ArchiveController extends GetxController {
   }
 
   void enterSelectionMode(String id) {
+    selectedDocIds.value = {...selectedDocIds, id};
+    selectedDocIds.refresh();
     isSelectionMode.value = true;
-    selectedDocIds.add(id);
   }
 
   void toggleSelection(String id) {
+    final updatedIds = selectedDocIds.toSet();
+
     if (selectedDocIds.contains(id)) {
-      selectedDocIds.remove(id);
+      updatedIds.remove(id);
     } else {
-      selectedDocIds.add(id);
+      updatedIds.add(id);
     }
+
+    selectedDocIds.value = updatedIds;
+    selectedDocIds.refresh();
 
     if (selectedDocIds.isEmpty) {
       isSelectionMode.value = false;
@@ -241,8 +338,29 @@ class ArchiveController extends GetxController {
   }
 
   void clearSelection() {
-    selectedDocIds.clear();
+    selectedDocIds.value = {};
+    selectedDocIds.refresh();
     isSelectionMode.value = false;
+  }
+
+  void selectAllVisibleDocuments() {
+    final visibleIds = filteredDocuments
+        .where((doc) => doc.status != 'processing')
+        .map((doc) => doc.id)
+        .toSet();
+
+    if (visibleIds.isEmpty) return;
+
+    isSelectionMode.value = true;
+
+    if (selectedDocIds.length == visibleIds.length &&
+        selectedDocIds.containsAll(visibleIds)) {
+      selectedDocIds.value = {};
+      isSelectionMode.value = false;
+    } else {
+      selectedDocIds.value = visibleIds;
+    }
+    selectedDocIds.refresh();
   }
 
   Future<void> deleteSelectedDocuments() async {
@@ -253,11 +371,21 @@ class ArchiveController extends GetxController {
       return;
     }
 
+    final selectedDocs =
+        documents.where((doc) => ids.contains(doc.id)).toList();
+    final deleteBackup = await _confirmDeleteDocuments(selectedDocs);
+
+    if (deleteBackup == null) return;
+
     isLoading.value = true;
+    int deletedBackupCount = 0;
 
     try {
       for (final id in ids) {
-        await apiService.deleteDocument(id);
+        final deleted = await apiService.deleteDocument(id);
+        if (deleted && deleteBackup) {
+          deletedBackupCount += await _deleteRegisteredBackups(id);
+        }
       }
 
       clearSelection();
@@ -265,7 +393,9 @@ class ArchiveController extends GetxController {
 
       Get.snackbar(
         'Berhasil',
-        'Dokumen terpilih berhasil dihapus.',
+        deletedBackupCount > 0
+            ? 'Dokumen terpilih dan $deletedBackupCount file cadangan berhasil dihapus.'
+            : 'Dokumen terpilih berhasil dihapus.',
         snackPosition: SnackPosition.BOTTOM,
       );
     } catch (e) {
@@ -280,16 +410,326 @@ class ArchiveController extends GetxController {
   }
 
   void replaceDocument(Document doc) {
-    Get.toNamed(Routes.REPLACE, arguments: doc);
+    Get.bottomSheet(
+      SafeArea(
+        top: false,
+        child: Container(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            28 + MediaQuery.of(Get.context!).padding.bottom,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(28),
+              topRight: Radius.circular(28),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Ganti Dokumen',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Pilih sumber file pengganti untuk ${doc.title}.',
+                style: const TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0xFFE7F6F4),
+                  child: Icon(LucideIcons.scan, color: Colors.teal),
+                ),
+                title: const Text('Foto Scan'),
+                subtitle:
+                    const Text('Gunakan kamera scanner untuk memindai ulang surat'),
+                onTap: () {
+                  Get.back();
+                  Get.toNamed(
+                    Routes.REPLACE,
+                    arguments: {'document': doc, 'initialSource': 'scan'},
+                  );
+                },
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0xFFEFF3FF),
+                  child: Icon(LucideIcons.upload, color: Colors.blue),
+                ),
+                title: const Text('Upload File'),
+                subtitle: const Text('Pilih file gambar atau PDF dari perangkat'),
+                onTap: () {
+                  Get.back();
+                  Get.toNamed(
+                    Routes.REPLACE,
+                    arguments: {'document': doc, 'initialSource': 'upload'},
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
-  void editDocument(Document doc) {
-    Get.snackbar(
-      'Edit Mode',
-      'Feature details editing is handled inside document details screen.',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.blue.withOpacity(0.8),
-      colorText: Colors.white,
+  Future<void> backupDocument(Document doc) async {
+    try {
+      final bytes = await apiService.downloadDocumentBytes(doc.id);
+      if (bytes == null || bytes.isEmpty) {
+        Get.snackbar(
+          'Backup Gagal',
+          'Dokumen ${doc.title} tidak dapat diunduh.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+
+      final pathOrMessage = await saveDocumentToLocal(bytes, doc.title);
+      if (canDeleteDocumentBackupFile(pathOrMessage)) {
+        await backupRegistry.registerBackupPath(doc.id, pathOrMessage);
+      }
+      Get.snackbar(
+        'Backup Berhasil',
+        pathOrMessage,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Backup Gagal',
+        'Terjadi kesalahan saat mencadangkan ${doc.title}: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  Future<void> backupSelectedDocuments() async {
+    final selectedDocs = filteredDocuments
+        .where((doc) => selectedDocIds.contains(doc.id))
+        .toList();
+
+    if (selectedDocs.isEmpty) {
+      clearSelection();
+      return;
+    }
+
+    isLoading.value = true;
+    int successCount = 0;
+
+    try {
+      for (final doc in selectedDocs) {
+        final bytes = await apiService.downloadDocumentBytes(doc.id);
+        if (bytes == null || bytes.isEmpty) {
+          continue;
+        }
+
+        final pathOrMessage = await saveDocumentToLocal(bytes, doc.title);
+        if (canDeleteDocumentBackupFile(pathOrMessage)) {
+          await backupRegistry.registerBackupPath(doc.id, pathOrMessage);
+        }
+        successCount++;
+      }
+
+      Get.snackbar(
+        'Cadangan Selesai',
+        '$successCount dari ${selectedDocs.length} dokumen berhasil dicadangkan.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      clearSelection();
+    } catch (e) {
+      Get.snackbar(
+        'Cadangan Gagal',
+        'Terjadi kesalahan saat batch backup: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  DateTime _parseArchivedDate(String value) {
+    return DateTime.tryParse(value) ?? DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
+  Future<bool?> _confirmDeleteDocument(Document doc) async {
+    final backupCount = backupRegistry.getBackupPaths(doc.id).length;
+    var keepBackup = false;
+
+    return Get.dialog<bool>(
+      StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text(
+            'Hapus Dokumen?',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Dokumen "${doc.title}" akan dihapus dari aplikasi.',
+                style: const TextStyle(fontSize: 13, height: 1.35),
+              ),
+              const SizedBox(height: 14),
+              _buildKeepBackupCheckbox(
+                value: keepBackup,
+                backupCount: backupCount,
+                onChanged: (value) {
+                  setState(() => keepBackup = value);
+                },
+              ),
+            ],
+          ),
+          actionsPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(result: null),
+              child: const Text('Batal', style: TextStyle(fontSize: 13)),
+            ),
+            TextButton(
+              onPressed: () => Get.back(result: !keepBackup),
+              child: const Text(
+                'Hapus',
+                style: TextStyle(color: Colors.red, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  Future<bool?> _confirmDeleteDocuments(List<Document> docs) async {
+    final backupCount = docs.fold<int>(
+      0,
+      (total, doc) => total + backupRegistry.getBackupPaths(doc.id).length,
+    );
+    var keepBackup = false;
+
+    return Get.dialog<bool>(
+      StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text(
+            'Hapus Dokumen Terpilih?',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Sebanyak ${docs.length} dokumen akan dihapus permanen.',
+                style: const TextStyle(fontSize: 13, height: 1.35),
+              ),
+              const SizedBox(height: 14),
+              _buildKeepBackupCheckbox(
+                value: keepBackup,
+                backupCount: backupCount,
+                onChanged: (value) {
+                  setState(() => keepBackup = value);
+                },
+              ),
+            ],
+          ),
+          actionsPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(result: null),
+              child: const Text('Batal', style: TextStyle(fontSize: 13)),
+            ),
+            TextButton(
+              onPressed: () => Get.back(result: !keepBackup),
+              child: const Text(
+                'Hapus',
+                style: TextStyle(color: Colors.red, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildKeepBackupCheckbox({
+    required bool value,
+    required int backupCount,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => onChanged(!value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.45)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 28,
+              height: 28,
+              child: Checkbox(
+                value: value,
+                activeColor: AppTheme.primary,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+                onChanged: (checked) => onChanged(checked ?? false),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Jangan hapus file cadangan',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    backupCount > 0
+                        ? '$backupCount file cadangan terdeteksi.'
+                        : 'Belum ada file cadangan tercatat.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      height: 1.25,
+                      color: AppTheme.outline,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<int> _deleteRegisteredBackups(String docId) async {
+    final paths = backupRegistry.getBackupPaths(docId);
+    int deletedCount = 0;
+
+    for (final path in paths) {
+      final deleted = await deleteDocumentBackupFile(path);
+      if (deleted) {
+        deletedCount++;
+      }
+      await backupRegistry.removeBackupPath(docId, path);
+    }
+
+    return deletedCount;
   }
 }

@@ -10,8 +10,9 @@ class ReplaceView extends GetView<ReplaceController> {
 
   @override
   Widget build(BuildContext context) {
+    final scaffoldColor = Theme.of(context).scaffoldBackgroundColor;
     return Scaffold(
-      backgroundColor: AppTheme.surface,
+      backgroundColor: scaffoldColor,
       appBar: AppBar(
         title: const Text(
           'Replace Document',
@@ -159,7 +160,7 @@ class ReplaceView extends GetView<ReplaceController> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'File baru akan menggantikan dokumen lama, lalu diproses ulang dengan OCR, klasifikasi, dan ekstraksi informasi.',
+            'Pilih apakah Anda ingin memindai ulang surat lewat foto scan atau mengunggah file dari perangkat.',
             style: TextStyle(
               fontSize: 13,
               color: AppTheme.onSurfaceVariant,
@@ -173,9 +174,9 @@ class ReplaceView extends GetView<ReplaceController> {
                 child: OutlinedButton.icon(
                   onPressed: controller.isLoading.value
                       ? null
-                      : controller.pickFromGallery,
-                  icon: const Icon(LucideIcons.image),
-                  label: const Text('Galeri'),
+                      : controller.pickFromFiles,
+                  icon: const Icon(LucideIcons.upload),
+                  label: const Text('Upload File'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.primary,
                     side: const BorderSide(color: AppTheme.primary),
@@ -191,10 +192,10 @@ class ReplaceView extends GetView<ReplaceController> {
                 child: ElevatedButton.icon(
                   onPressed: controller.isLoading.value
                       ? null
-                      : controller.pickFromCamera,
-                  icon: const Icon(LucideIcons.camera, color: Colors.white),
+                      : controller.pickFromScanner,
+                  icon: const Icon(LucideIcons.scan, color: Colors.white),
                   label: const Text(
-                    'Kamera',
+                    'Foto Scan',
                     style: TextStyle(color: Colors.white),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -242,7 +243,7 @@ class ReplaceView extends GetView<ReplaceController> {
             ),
             SizedBox(height: 4),
             Text(
-              'Pilih file dari galeri atau ambil foto baru.',
+              'Pilih upload file atau lakukan foto scan dokumen baru.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,

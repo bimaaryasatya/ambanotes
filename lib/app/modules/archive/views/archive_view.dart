@@ -12,8 +12,9 @@ class ArchiveView extends GetView<ArchiveController> {
 
   @override
   Widget build(BuildContext context) {
+    final scaffoldColor = Theme.of(context).scaffoldBackgroundColor;
     return Scaffold(
-      backgroundColor: AppTheme.surface,
+      backgroundColor: scaffoldColor,
       bottomNavigationBar: const CustomBottomNavBar(currentIndex: 1),
       appBar: AppBar(
         title: Obx(() {
@@ -30,9 +31,18 @@ class ArchiveView extends GetView<ArchiveController> {
             return Row(
               children: [
                 IconButton(
-                  icon: const Icon(LucideIcons.trash2, color: Colors.red),
-                  onPressed: controller.deleteSelectedDocuments,
+                  icon: const Icon(LucideIcons.checkSquare),
+                  onPressed: controller.selectAllVisibleDocuments,
                 ),
+                IconButton(
+                  icon: const Icon(LucideIcons.download),
+                  onPressed: controller.backupSelectedDocuments,
+                ),
+                if (controller.apiService.isOwner)
+                  IconButton(
+                    icon: const Icon(LucideIcons.trash2, color: Colors.red),
+                    onPressed: controller.deleteSelectedDocuments,
+                  ),
                 IconButton(
                   icon: const Icon(LucideIcons.x),
                   onPressed: controller.clearSelection,
@@ -101,17 +111,33 @@ class ArchiveView extends GetView<ArchiveController> {
             ),
           ),
           GestureDetector(
-            onTap: controller.toggleSort,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: AppTheme.surface,
-                shape: BoxShape.circle,
+            onTap: controller.showSortOptions,
+            child: Obx(
+              () => Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.surface,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(LucideIcons.sliders,
+                        size: 16, color: AppTheme.secondary),
+                    const SizedBox(width: 6),
+                    Text(
+                      controller.sortLabel,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.secondary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: const Icon(LucideIcons.sliders,
-                  size: 18, color: AppTheme.secondary),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -178,7 +204,7 @@ class ArchiveView extends GetView<ArchiveController> {
         itemCount: filteredDocs.length,
         itemBuilder: (context, index) {
           final doc = filteredDocs[index];
-          return _buildDocumentItem(doc);
+          return Obx(() => _buildDocumentItem(doc));
         },
       );
     });
@@ -187,6 +213,8 @@ class ArchiveView extends GetView<ArchiveController> {
   Widget _buildDocumentItem(Document doc) {
     final isProcessing = doc.status == 'processing';
     final isSelected = controller.selectedDocIds.contains(doc.id);
+    final showSelectionUi = controller.isSelectionMode.value && !isProcessing;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -230,29 +258,12 @@ class ArchiveView extends GetView<ArchiveController> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: isProcessing
-                        ? AppTheme.primary.withOpacity(0.05)
-                        : AppTheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: isProcessing
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: Padding(
-                            padding: EdgeInsets.all(14.0),
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: AppTheme.primary),
-                          ),
-                        )
-                      : const Icon(LucideIcons.fileText,
-                          color: AppTheme.secondary),
-                ),
-                const SizedBox(width: 16),
+                if (showSelectionUi) ...[
+                  _buildSelectionCheckbox(isSelected),
+                  const SizedBox(width: 12),
+                ],
+                _buildDocumentIcon(isProcessing),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -339,7 +350,7 @@ class ArchiveView extends GetView<ArchiveController> {
                       const SizedBox(height: 12),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
                             child: Wrap(
@@ -348,6 +359,9 @@ class ArchiveView extends GetView<ArchiveController> {
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 _buildStatusBadge(doc.status),
+                                if (controller.apiService.isOwner ||
+                                    _isGeneralDisposition(doc))
+                                  _buildDispositionBadge(doc),
                                 Text(
                                   doc.archivedDate,
                                   style: const TextStyle(
@@ -360,35 +374,33 @@ class ArchiveView extends GetView<ArchiveController> {
                           ),
                           if (!isProcessing &&
                               !controller.isSelectionMode.value)
-                            PopupMenuButton<String>(
-                              icon: const Icon(LucideIcons.moreVertical,
-                                  size: 18, color: AppTheme.outline),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              onSelected: (value) {
-                                if (value == 'delete') {
-                                  controller.deleteDocument(doc);
-                                } else if (value == 'edit') {
-                                  controller.editDocument(doc);
-                                } else if (value == 'replace') {
-                                  controller.replaceDocument(doc);
-                                }
-                              },
-                              itemBuilder: (BuildContext context) =>
-                                  <PopupMenuEntry<String>>[
-                                const PopupMenuItem<String>(
-                                  value: 'edit',
-                                  child: Text('Edit'),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (controller.apiService.isOwner) ...[
+                                  _buildCardAction(
+                                    icon: LucideIcons.refreshCw,
+                                    tooltip: 'Replace',
+                                    color: AppTheme.primary,
+                                    onTap: () => controller.replaceDocument(doc),
+                                  ),
+                                  const SizedBox(width: 8),
+                                ],
+                                _buildCardAction(
+                                  icon: LucideIcons.download,
+                                  tooltip: 'Cadangkan',
+                                  color: AppTheme.secondary,
+                                  onTap: () => controller.backupDocument(doc),
                                 ),
-                                const PopupMenuItem<String>(
-                                  value: 'replace',
-                                  child: Text('Replace'),
-                                ),
-                                const PopupMenuItem<String>(
-                                  value: 'delete',
-                                  child: Text('Delete',
-                                      style: TextStyle(color: Colors.red)),
-                                ),
+                                if (controller.apiService.isOwner) ...[
+                                  const SizedBox(width: 8),
+                                  _buildCardAction(
+                                    icon: LucideIcons.trash2,
+                                    tooltip: 'Delete',
+                                    color: Colors.red,
+                                    onTap: () => controller.deleteDocument(doc),
+                                  ),
+                                ],
                               ],
                             ),
                         ],
@@ -401,6 +413,60 @@ class ArchiveView extends GetView<ArchiveController> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSelectionCheckbox(bool isSelected) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 9),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        width: 24,
+        height: 24,
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primary : Colors.white,
+          borderRadius: BorderRadius.circular(7),
+          border: Border.all(
+            color: isSelected ? AppTheme.primary : AppTheme.outlineVariant,
+            width: 1.6,
+          ),
+        ),
+        child: Icon(
+          LucideIcons.check,
+          size: 15,
+          color: isSelected ? Colors.white : Colors.transparent,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDocumentIcon(bool isProcessing) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: isProcessing
+            ? AppTheme.primary.withOpacity(0.05)
+            : AppTheme.surface,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: isProcessing
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: Padding(
+                padding: EdgeInsets.all(12.0),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppTheme.primary,
+                ),
+              ),
+            )
+          : const Icon(
+              LucideIcons.fileText,
+              size: 20,
+              color: AppTheme.secondary,
+            ),
     );
   }
 
@@ -445,6 +511,58 @@ class ArchiveView extends GetView<ArchiveController> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDispositionBadge(Document doc) {
+    final isGeneral = _isGeneralDisposition(doc);
+    final label = isGeneral ? 'GENERAL' : 'DIVISI: ${doc.delegationName}';
+    final color = isGeneral ? AppTheme.outline : AppTheme.primary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  bool _isGeneralDisposition(Document doc) {
+    return doc.delegationId.isEmpty ||
+        doc.delegationId == 'general' ||
+        doc.delegationName.toLowerCase() == 'general';
+  }
+
+  Widget _buildCardAction({
+    required IconData icon,
+    required String tooltip,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 14, color: color),
+        ),
       ),
     );
   }

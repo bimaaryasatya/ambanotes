@@ -16,8 +16,11 @@ class HomeController extends GetxController {
 
   final agenda = <AgendaItem>[].obs;
   final documents = <Document>[].obs;
+  final notifications = <Map<String, dynamic>>[].obs;
+  final calendarMonth = DateTime(DateTime.now().year, DateTime.now().month).obs;
   final isLoading = false.obs;
   final isUploading = false.obs;
+  final isLoadingNotifications = false.obs;
 
   @override
   void onInit() {
@@ -49,15 +52,23 @@ class HomeController extends GetxController {
             ? item['time'] 
             : '09:00 AM';
         
+        final dateRaw = item['date']?.toString() ?? '';
+        final parsedDate = _parseReminderDate(dateRaw);
+        final calendarEventId =
+            item['google_calendar_event_id']?.toString() ?? '';
+
         parsedAgenda.add(AgendaItem(
           id: item['_id'] ?? '',
           title: task,
           startTime: time,
-          endTime: item['date'] ?? 'Today',
+          endTime: dateRaw.isNotEmpty ? dateRaw : 'Today',
           location: item['location'] != null && item['location'].toString().isNotEmpty 
               ? item['location'] 
               : 'Secretariat Office',
           priority: priority,
+          date: parsedDate,
+          calendarEventId: calendarEventId,
+          googleCalendarSynced: calendarEventId.isNotEmpty,
         ));
       }
 
@@ -90,6 +101,8 @@ class HomeController extends GetxController {
           type: classification['label_name'] ?? 'Letter',
           archivedDate: item['uploaded_at'] ?? 'Unknown',
           size: '1.2 MB',
+          delegationId: item['delegation_id'] ?? 'general',
+          delegationName: item['delegation_name'] ?? 'General',
         ));
       }
       documents.assignAll(parsedDocs);
@@ -97,6 +110,65 @@ class HomeController extends GetxController {
       print("Fetch dashboard data error: $e");
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  List<AgendaItem> get googleCalendarAgenda => agenda
+      .where((item) =>
+          item.id != 'placeholder' &&
+          item.date != null &&
+          item.googleCalendarSynced)
+      .toList();
+
+  List<AgendaItem> agendaForDate(DateTime day) {
+    return googleCalendarAgenda
+        .where((item) => _isSameDate(item.date!, day))
+        .toList();
+  }
+
+  void goToPreviousCalendarMonth() {
+    final current = calendarMonth.value;
+    calendarMonth.value = DateTime(current.year, current.month - 1);
+  }
+
+  void goToNextCalendarMonth() {
+    final current = calendarMonth.value;
+    calendarMonth.value = DateTime(current.year, current.month + 1);
+  }
+
+  DateTime? _parseReminderDate(String value) {
+    if (value.isEmpty) return null;
+    final normalized = value.trim();
+    final parsed = DateTime.tryParse(normalized);
+    if (parsed != null) return parsed;
+
+    final parts = normalized.split(RegExp(r'[-/]'));
+    if (parts.length == 3) {
+      final first = int.tryParse(parts[0]);
+      final second = int.tryParse(parts[1]);
+      final third = int.tryParse(parts[2]);
+      if (first != null && second != null && third != null) {
+        if (parts[0].length == 4) return DateTime(first, second, third);
+        return DateTime(third, second, first);
+      }
+    }
+
+    return null;
+  }
+
+  bool _isSameDate(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Future<void> fetchNotifications() async {
+    isLoadingNotifications.value = true;
+    try {
+      final result = await apiService.getRecentNotifications(limit: 20);
+      notifications.assignAll(List<Map<String, dynamic>>.from(result));
+    } catch (e) {
+      print("Fetch notifications error: $e");
+    } finally {
+      isLoadingNotifications.value = false;
     }
   }
 
@@ -146,6 +218,8 @@ class HomeController extends GetxController {
         type: 'Processing',
         archivedDate: 'Sedang diproses',
         size: '...',
+        delegationId: 'general',
+        delegationName: 'General',
       );
 
       // Insert into local documents list
@@ -216,6 +290,8 @@ class HomeController extends GetxController {
                   type: classification['label_name'] ?? 'Letter',
                   archivedDate: result['uploaded_at'] ?? 'Just now',
                   size: '1.2 MB',
+                  delegationId: result['delegation_id'] ?? 'general',
+                  delegationName: result['delegation_name'] ?? 'General',
                 );
                 Get.toNamed(Routes.ARCHIVE_DETAIL, arguments: completedDoc);
               },

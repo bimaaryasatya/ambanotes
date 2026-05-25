@@ -3,15 +3,19 @@ import 'dart:typed_data';
 import 'package:ambanotes/app/data/models/models.dart';
 import 'package:ambanotes/app/data/services/api_service.dart';
 import 'package:ambanotes/app/routes/app_pages.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_mlkit_document_scanner/google_mlkit_document_scanner.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class ReplaceController extends GetxController {
   final ApiService apiService = Get.find<ApiService>();
   final ImagePicker picker = ImagePicker();
 
   late Document document;
+  String? initialSource;
 
   final isLoading = false.obs;
   final selectedBytes = Rxn<Uint8List>();
@@ -26,6 +30,9 @@ class ReplaceController extends GetxController {
 
     if (args is Document) {
       document = args;
+    } else if (args is Map<String, dynamic> && args['document'] is Document) {
+      document = args['document'] as Document;
+      initialSource = args['initialSource']?.toString();
     } else {
       document = Document(
         id: '',
@@ -45,6 +52,16 @@ class ReplaceController extends GetxController {
         );
         Get.back();
       });
+    }
+  }
+
+  @override
+  void onReady() {
+    super.onReady();
+    if (initialSource == 'scan') {
+      Future.microtask(pickFromScanner);
+    } else if (initialSource == 'upload') {
+      Future.microtask(pickFromFiles);
     }
   }
 
@@ -109,6 +126,61 @@ class ReplaceController extends GetxController {
       Get.snackbar(
         'Gagal Membuka Kamera',
         'Terjadi kesalahan saat mengambil gambar: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  Future<void> pickFromScanner() async {
+    try {
+      final options = DocumentScannerOptions(
+        documentFormat: DocumentFormat.jpeg,
+        mode: ScannerMode.full,
+        pageLimit: 1,
+        isGalleryImport: true,
+      );
+      final scanner = DocumentScanner(options: options);
+      final result = await scanner.scanDocument();
+
+      if (result.images.isEmpty) return;
+
+      final imagePath = result.images.first;
+      final file = File(imagePath);
+      selectedBytes.value = await file.readAsBytes();
+      selectedFilename.value = imagePath.split('/').last;
+      selectedMimeHint.value =
+          _guessMimeFromFilename(selectedFilename.value);
+    } catch (e) {
+      Get.snackbar(
+        'Gagal Scan Dokumen',
+        'Terjadi kesalahan saat memindai dokumen: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  Future<void> pickFromFiles() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf', 'webp'],
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      final file = result.files.first;
+      final bytes = file.bytes ??
+          (file.path != null ? await File(file.path!).readAsBytes() : null);
+      if (bytes == null) return;
+
+      selectedBytes.value = bytes;
+      selectedFilename.value = file.name;
+      selectedMimeHint.value = _guessMimeFromFilename(file.name);
+    } catch (e) {
+      Get.snackbar(
+        'Gagal Memilih File',
+        'Terjadi kesalahan saat memilih file pengganti: $e',
         snackPosition: SnackPosition.BOTTOM,
       );
     }

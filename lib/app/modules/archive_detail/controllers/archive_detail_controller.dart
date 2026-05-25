@@ -10,9 +10,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../data/services/api_service.dart';
+import '../../../data/services/backup_registry_service.dart';
 
 class ArchiveDetailController extends GetxController {
   final apiService = Get.find<ApiService>();
+  final backupRegistry = Get.find<BackupRegistryService>();
 
   late Document document;
   final isLoading = false.obs;
@@ -22,6 +24,8 @@ class ArchiveDetailController extends GetxController {
   final organisasiPenerbit = ''.obs;
   final uploadedBy = ''.obs;
   final googleDriveConnected = false.obs;
+  final documentContent = ''.obs;
+  final detectedEntityDates = <String>[].obs;
 
   final base64Image = ''.obs;
   final driveWebViewLink = ''.obs;
@@ -62,10 +66,15 @@ class ArchiveDetailController extends GetxController {
       final detail = await apiService.getDocumentDetail(document.id);
       if (detail != null) {
         final entities = detail['entities'] ?? {};
+        final rawDates = entities['dates'];
         nomorSurat.value = entities['nomor_surat'] ?? 'Tidak Terdeteksi';
         perihal.value = entities['perihal'] ?? 'Tidak Terdeteksi';
         organisasiPenerbit.value =
             entities['organisasi_penerbit'] ?? 'Tidak Terdeteksi';
+        documentContent.value = detail['content']?.toString() ?? document.summary;
+        detectedEntityDates.assignAll(
+          rawDates is List ? rawDates.map((e) => e.toString()).toList() : const [],
+        );
 
         securitySuggestion.value = detail['security_suggestion'] ?? '';
         uploadedBy.value = detail['uploaded_by']?.toString() ?? 'Admin User';
@@ -213,6 +222,7 @@ class ArchiveDetailController extends GetxController {
       final file = File('${targetDir.path}/$safeName');
 
       await file.writeAsBytes(bytes);
+      await backupRegistry.registerBackupPath(document.id, file.path);
 
       Get.snackbar(
         'Backup Berhasil',
@@ -390,27 +400,38 @@ class ArchiveDetailController extends GetxController {
     );
   }
 
-  void showAddReminderDialog(BuildContext context) {
-    final taskController = TextEditingController(
-        text: perihal.value != 'Tidak Terdeteksi'
-            ? 'Agenda: ${perihal.value}'
-            : 'Agenda: ${document.title}');
+  Future<void> showAddReminderDialog(BuildContext context) async {
+    Get.dialog(
+      const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text(
+                  'Mendeteksi tanggal dan waktu dari surat...',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
 
-    String parsedDate = DateTime.now().toIso8601String().split('T')[0];
-    if (document.archivedDate.isNotEmpty) {
-      final regex = RegExp(r'\d{4}-\d{2}-\d{2}');
-      final match = regex.firstMatch(document.archivedDate);
-      if (match != null) {
-        parsedDate = match.group(0)!;
-      }
+    final prefill = await _buildReminderPrefill();
+    if (Get.isDialogOpen == true) {
+      Get.back();
     }
 
-    final dateController = TextEditingController(text: parsedDate);
-    final timeController = TextEditingController(text: '09:00');
-    final locationController = TextEditingController(
-        text: organisasiPenerbit.value != 'Tidak Terdeteksi'
-            ? organisasiPenerbit.value
-            : '');
+    final taskController = TextEditingController(text: prefill['task']);
+    final dateController = TextEditingController(text: prefill['date']);
+    final timeController = TextEditingController(text: prefill['time']);
+    final locationController = TextEditingController(text: prefill['location']);
 
     Get.dialog(
       AlertDialog(
@@ -578,6 +599,204 @@ class ArchiveDetailController extends GetxController {
         ],
       ),
     );
+  }
+
+  Future<Map<String, String>> _buildReminderPrefill() async {
+    final fallbackDate =
+        DateTime.now().toIso8601String().split('T').first;
+    final prefill = <String, String>{
+      'task': perihal.value != 'Tidak Terdeteksi'
+          ? 'Agenda: ${perihal.value}'
+          : 'Agenda: ${document.title}',
+      'date': _extractDateFromArchivedAt() ?? fallbackDate,
+      'time': '09:00',
+      'location': organisasiPenerbit.value != 'Tidak Terdeteksi'
+          ? organisasiPenerbit.value
+          : '',
+    };
+
+    final content = documentContent.value.trim().isNotEmpty
+        ? documentContent.value.trim()
+        : document.summary.trim();
+
+    final aiPrefill = await _extractReminderFromAi(content);
+    if ((aiPrefill['task'] ?? '').isNotEmpty) {
+      prefill['task'] = aiPrefill['task']!;
+    }
+    if ((aiPrefill['date'] ?? '').isNotEmpty) {
+      prefill['date'] = aiPrefill['date']!;
+    } else {
+      final entityDate = _extractDateFromEntities();
+      if (entityDate != null) {
+        prefill['date'] = entityDate;
+      }
+    }
+    if ((aiPrefill['time'] ?? '').isNotEmpty) {
+      prefill['time'] = aiPrefill['time']!;
+    } else {
+      final detectedTime = _extractTimeFromText(content);
+      if (detectedTime != null) {
+        prefill['time'] = detectedTime;
+      }
+    }
+    if ((aiPrefill['location'] ?? '').isNotEmpty) {
+      prefill['location'] = aiPrefill['location']!;
+    }
+
+    return prefill;
+  }
+
+  Future<Map<String, String>> _extractReminderFromAi(String content) async {
+    if (content.isEmpty) return const {};
+    try {
+      final tasks = await apiService.extractTasks(content);
+      if (tasks.isEmpty) return const {};
+
+      final firstTask = Map<String, dynamic>.from(tasks.first as Map);
+      final normalizedDate =
+          _normalizeDateValue(firstTask['date']?.toString() ?? '');
+      final normalizedTime =
+          _normalizeTimeValue(firstTask['time']?.toString() ?? '');
+
+      return {
+        'task': (firstTask['task']?.toString() ?? '').trim(),
+        'date': normalizedDate ?? '',
+        'time': normalizedTime ?? '',
+        'location': (firstTask['location']?.toString() ?? '').trim(),
+      };
+    } catch (e) {
+      print('Extract reminder prefill error: $e');
+      return const {};
+    }
+  }
+
+  String? _extractDateFromArchivedAt() {
+    if (document.archivedDate.isEmpty) return null;
+    final regex = RegExp(r'\d{4}-\d{2}-\d{2}');
+    final match = regex.firstMatch(document.archivedDate);
+    return match?.group(0);
+  }
+
+  String? _extractDateFromEntities() {
+    for (final rawDate in detectedEntityDates) {
+      final normalized = _normalizeDateValue(rawDate);
+      if (normalized != null) {
+        return normalized;
+      }
+    }
+    return null;
+  }
+
+  String? _normalizeDateValue(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty) return null;
+
+    final isoMatch = RegExp(r'(\d{4})-(\d{2})-(\d{2})').firstMatch(value);
+    if (isoMatch != null) {
+      return '${isoMatch.group(1)}-${isoMatch.group(2)}-${isoMatch.group(3)}';
+    }
+
+    final dmyNumeric =
+        RegExp(r'(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})').firstMatch(value);
+    if (dmyNumeric != null) {
+      final day = int.tryParse(dmyNumeric.group(1)!);
+      final month = int.tryParse(dmyNumeric.group(2)!);
+      var year = int.tryParse(dmyNumeric.group(3)!);
+      if (day != null && month != null && year != null) {
+        if (year < 100) year += 2000;
+        return _safeIsoDate(year, month, day);
+      }
+    }
+
+    final lowered = value.toLowerCase();
+    final monthNames = <String, int>{
+      'januari': 1,
+      'februari': 2,
+      'maret': 3,
+      'april': 4,
+      'mei': 5,
+      'juni': 6,
+      'juli': 7,
+      'agustus': 8,
+      'september': 9,
+      'oktober': 10,
+      'november': 11,
+      'desember': 12,
+    };
+
+    final monthPattern = monthNames.keys.join('|');
+    final indonesianDate = RegExp(
+      r'(\d{1,2})\s+(' + monthPattern + r')\s+(\d{4})',
+      caseSensitive: false,
+    ).firstMatch(lowered);
+
+    if (indonesianDate != null) {
+      final day = int.tryParse(indonesianDate.group(1)!);
+      final month = monthNames[indonesianDate.group(2)!.toLowerCase()];
+      final year = int.tryParse(indonesianDate.group(3)!);
+      if (day != null && month != null && year != null) {
+        return _safeIsoDate(year, month, day);
+      }
+    }
+
+    return null;
+  }
+
+  String? _safeIsoDate(int year, int month, int day) {
+    try {
+      final parsed = DateTime(year, month, day);
+      return parsed.toIso8601String().split('T').first;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _normalizeTimeValue(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty) return null;
+
+    final fullTime =
+        RegExp(r'(\d{1,2})[:.](\d{2})').firstMatch(value);
+    if (fullTime != null) {
+      final hour = int.tryParse(fullTime.group(1)!);
+      final minute = int.tryParse(fullTime.group(2)!);
+      if (hour != null && minute != null && hour >= 0 && hour < 24) {
+        return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+      }
+    }
+
+    final shortTime = RegExp(
+      r'^(?:pukul|jam)?\s*(\d{1,2})(?:\s*(wib|wit|wita))?$',
+      caseSensitive: false,
+    ).firstMatch(value);
+    if (shortTime != null) {
+      final hour = int.tryParse(shortTime.group(1)!);
+      if (hour != null && hour >= 0 && hour < 24) {
+        return '${hour.toString().padLeft(2, '0')}:00';
+      }
+    }
+
+    return null;
+  }
+
+  String? _extractTimeFromText(String text) {
+    final normalized = _normalizeTimeValue(text);
+    if (normalized != null) return normalized;
+
+    final timeMatch = RegExp(
+      r'(?:pukul|jam)\s+(\d{1,2})(?:[:.](\d{2}))?',
+      caseSensitive: false,
+    ).firstMatch(text);
+
+    if (timeMatch != null) {
+      final hour = int.tryParse(timeMatch.group(1)!);
+      final minute = int.tryParse(timeMatch.group(2) ?? '00');
+      if (hour != null && minute != null && hour >= 0 && hour < 24) {
+        return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+      }
+    }
+
+    return null;
   }
 
   Future<void> suggestAndShowDispositionDialog(BuildContext context) async {

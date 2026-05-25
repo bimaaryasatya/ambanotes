@@ -2,29 +2,31 @@ import 'package:ambanotes/app/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:ambanotes/app/data/models/models.dart';
 import '../controllers/home_controller.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:ambanotes/app/routes/app_pages.dart';
 import 'package:ambanotes/app/widgets/custom_bottom_navbar.dart';
+import 'notifications_view.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final scaffoldColor = Theme.of(context).scaffoldBackgroundColor;
     return Scaffold(
-      backgroundColor: AppTheme.surface,
+      backgroundColor: scaffoldColor,
       bottomNavigationBar: const CustomBottomNavBar(currentIndex: 0),
       appBar: AppBar(
         title: const Text("AmbaNotes"),
-        leading: IconButton(
-          icon: const Icon(LucideIcons.menu),
-          onPressed: () {},
-        ),
         actions: [
           IconButton(
             icon: const Icon(LucideIcons.bell),
-            onPressed: () {},
+            onPressed: () {
+              controller.fetchNotifications();
+              Get.to(() => const NotificationsView());
+            },
           ),
         ],
       ),
@@ -48,6 +50,8 @@ class HomeView extends GetView<HomeController> {
             _buildAgendaHeader(context),
             const SizedBox(height: 16),
             _buildAgendaList(),
+            const SizedBox(height: 24),
+            _buildGoogleCalendarSection(context),
           ],
         ),
       ),
@@ -153,7 +157,7 @@ class HomeView extends GetView<HomeController> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Today's Agenda",
+          "Agenda's",
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontSize: 18,
                 color: AppTheme.primary,
@@ -260,10 +264,12 @@ class HomeView extends GetView<HomeController> {
                               if (item.id != 'placeholder') ...[
                                 const SizedBox(width: 8),
                                 IconButton(
-                                  icon: const Icon(LucideIcons.trash2, size: 16, color: Colors.redAccent),
+                                  icon: const Icon(LucideIcons.trash2,
+                                      size: 16, color: Colors.redAccent),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(),
-                                  onPressed: () => controller.confirmDeleteReminder(item),
+                                  onPressed: () =>
+                                      controller.confirmDeleteReminder(item),
                                 ),
                               ],
                             ],
@@ -305,5 +311,347 @@ class HomeView extends GetView<HomeController> {
         ),
       ),
     );
+  }
+
+  Widget _buildGoogleCalendarSection(BuildContext context) {
+    return Obx(() {
+      final month = controller.calendarMonth.value;
+      final monthAgenda = controller.googleCalendarAgenda
+          .where((item) =>
+              item.date!.year == month.year && item.date!.month == month.month)
+          .toList()
+        ..sort((a, b) => a.date!.compareTo(b.date!));
+
+      return Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.25)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryContainer.withOpacity(0.55),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(
+                    LucideIcons.calendarDays,
+                    color: AppTheme.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Kalender Agenda',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.onSurface,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Agenda surat yang tersinkron ke Google Calendar',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.outline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  onPressed: controller.goToPreviousCalendarMonth,
+                  icon: const Icon(LucideIcons.chevronLeft),
+                  color: AppTheme.primary,
+                  visualDensity: VisualDensity.compact,
+                ),
+                Text(
+                  _formatMonth(month),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.primary,
+                  ),
+                ),
+                IconButton(
+                  onPressed: controller.goToNextCalendarMonth,
+                  icon: const Icon(LucideIcons.chevronRight),
+                  color: AppTheme.primary,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _buildCalendarGrid(month),
+            const SizedBox(height: 18),
+            if (monthAgenda.isEmpty)
+              _buildEmptyCalendarState()
+            else
+              ...monthAgenda
+                  .take(4)
+                  .map((item) => _buildCalendarAgendaTile(item))
+                  .toList(),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildCalendarGrid(DateTime month) {
+    const weekdays = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+    final firstDay = DateTime(month.year, month.month);
+    final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
+    final leadingBlanks = firstDay.weekday - 1;
+    final totalCells = leadingBlanks + daysInMonth;
+
+    return Column(
+      children: [
+        Row(
+          children: weekdays
+              .map(
+                (day) => Expanded(
+                  child: Center(
+                    child: Text(
+                      day,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.outline,
+                      ),
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+        const SizedBox(height: 8),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 7,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 6,
+          ),
+          itemCount: totalCells,
+          itemBuilder: (context, index) {
+            if (index < leadingBlanks) return const SizedBox.shrink();
+
+            final dayNumber = index - leadingBlanks + 1;
+            final date = DateTime(month.year, month.month, dayNumber);
+            final events = controller.agendaForDate(date);
+            final hasEvents = events.isNotEmpty;
+            final isToday = _isSameDate(date, DateTime.now());
+
+            return Container(
+              decoration: BoxDecoration(
+                color: hasEvents
+                    ? AppTheme.primary.withOpacity(0.12)
+                    : isToday
+                        ? AppTheme.secondaryContainer.withOpacity(0.55)
+                        : Colors.transparent,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: hasEvents
+                      ? AppTheme.primary.withOpacity(0.35)
+                      : isToday
+                          ? AppTheme.outlineVariant
+                          : Colors.transparent,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '$dayNumber',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: hasEvents || isToday
+                          ? FontWeight.bold
+                          : FontWeight.w600,
+                      color: hasEvents ? AppTheme.primary : AppTheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: hasEvents ? 5 : 0,
+                    height: hasEvents ? 5 : 0,
+                    decoration: const BoxDecoration(
+                      color: AppTheme.aiAccent,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCalendarAgendaTile(AgendaItem item) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.secondaryContainer.withOpacity(0.28),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.25)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            padding: const EdgeInsets.symmetric(vertical: 7),
+            decoration: BoxDecoration(
+              color: AppTheme.primary,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  '${item.date!.day}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                  ),
+                ),
+                Text(
+                  _shortMonth(item.date!),
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(LucideIcons.clock,
+                        size: 12, color: AppTheme.outline),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Text(
+                        item.startTime,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.outline,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Icon(
+            LucideIcons.checkCircle2,
+            size: 18,
+            color: AppTheme.primary,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyCalendarState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceVariant.withOpacity(0.55),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: const Row(
+        children: [
+          Icon(LucideIcons.calendar, size: 18, color: AppTheme.outline),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Belum ada agenda Google Calendar pada bulan ini.',
+              style: TextStyle(fontSize: 12, color: AppTheme.outline),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatMonth(DateTime date) {
+    return '${_monthName(date.month)} ${date.year}';
+  }
+
+  String _shortMonth(DateTime date) {
+    return _monthName(date.month).substring(0, 3).toUpperCase();
+  }
+
+  String _monthName(int month) {
+    const months = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+    return months[month - 1];
+  }
+
+  bool _isSameDate(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 }

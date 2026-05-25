@@ -745,6 +745,16 @@ class ApiService extends GetxService {
     return null;
   }
 
+  Future<bool> deleteChatHistory(String docId) async {
+    try {
+      final response = await _delete('/ai/chat/$docId');
+      return response.statusCode == 200;
+    } catch (e) {
+      print("Delete chat history error: $e");
+      return false;
+    }
+  }
+
   Future<Map<String, dynamic>?> chatGlobal(String message,
       {List<Map<String, dynamic>>? history}) async {
     try {
@@ -837,6 +847,30 @@ class ApiService extends GetxService {
       print("Get predictive trends error: $e");
     }
     return null;
+  }
+
+  Future<List<dynamic>> getRecentNotifications({int limit = 15}) async {
+    try {
+      final response = await _get('/notification/recent?limit=$limit');
+      if (response.statusCode == 200 && response.body != null) {
+        return response.body as List<dynamic>;
+      }
+    } catch (e) {
+      print("Get notifications error: $e");
+    }
+    return [];
+  }
+
+  Future<List<dynamic>> getActivityLogs({int limit = 50}) async {
+    try {
+      final response = await _get('/auth/activity-logs?limit=$limit');
+      if (response.statusCode == 200 && response.body != null) {
+        return response.body as List<dynamic>;
+      }
+    } catch (e) {
+      print("Get activity logs error: $e");
+    }
+    return [];
   }
 
   Future<Map<String, dynamic>?> getEventInsights() async {

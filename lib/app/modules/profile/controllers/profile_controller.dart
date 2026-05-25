@@ -7,9 +7,11 @@ import 'package:get_storage/get_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../data/services/api_service.dart';
+import '../../../data/services/theme_service.dart';
 
 class ProfileController extends GetxController {
   final apiService = Get.find<ApiService>();
+  final themeService = Get.find<ThemeService>();
 
   final isLoading = false.obs;
   
@@ -30,6 +32,8 @@ class ProfileController extends GetxController {
 
   // Organization assets (kop & ttd)
   final assets = <Map<String, dynamic>>[].obs;
+  final activityLogs = <Map<String, dynamic>>[].obs;
+  final isLoadingActivityLogs = false.obs;
 
   @override
   void onInit() {
@@ -189,6 +193,18 @@ class ProfileController extends GetxController {
   void logout() {
     apiService.logout();
     Get.offAllNamed('/login');
+  }
+
+  Future<void> fetchActivityLogs() async {
+    isLoadingActivityLogs.value = true;
+    try {
+      final result = await apiService.getActivityLogs(limit: 100);
+      activityLogs.assignAll(List<Map<String, dynamic>>.from(result));
+    } catch (e) {
+      print("Fetch activity logs error: $e");
+    } finally {
+      isLoadingActivityLogs.value = false;
+    }
   }
 
   // --- Security & Account Management ---
