@@ -11,6 +11,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../data/services/api_service.dart';
 import '../../../data/services/backup_registry_service.dart';
+import '../../archive/controllers/archive_controller.dart';
 
 class ArchiveDetailController extends GetxController {
   final apiService = Get.find<ApiService>();
@@ -26,6 +27,9 @@ class ArchiveDetailController extends GetxController {
   final googleDriveConnected = false.obs;
   final documentContent = ''.obs;
   final detectedEntityDates = <String>[].obs;
+  final isGeneratedAssignment = false.obs;
+  final isPendingAssignmentApproval = false.obs;
+  final assignmentWorkflowMessage = ''.obs;
 
   final base64Image = ''.obs;
   final driveWebViewLink = ''.obs;
@@ -65,6 +69,19 @@ class ArchiveDetailController extends GetxController {
     try {
       final detail = await apiService.getDocumentDetail(document.id);
       if (detail != null) {
+        final classification = detail['classification'] ?? {};
+        document = Document(
+          id: detail['doc_id'] ?? document.id,
+          title: detail['filename'] ?? document.title,
+          summary: detail['content'] ?? document.summary,
+          status: detail['status'] ?? document.status,
+          type: classification['label_name'] ?? document.type,
+          archivedDate: detail['uploaded_at'] ?? document.archivedDate,
+          size: document.size,
+          delegationId: detail['delegation_id'] ?? document.delegationId,
+          delegationName: detail['delegation_name'] ?? document.delegationName,
+        );
+
         final entities = detail['entities'] ?? {};
         final rawDates = entities['dates'];
         nomorSurat.value = entities['nomor_surat'] ?? 'Tidak Terdeteksi';
@@ -77,7 +94,16 @@ class ArchiveDetailController extends GetxController {
         );
 
         securitySuggestion.value = detail['security_suggestion'] ?? '';
-        uploadedBy.value = detail['uploaded_by']?.toString() ?? 'Admin User';
+        uploadedBy.value = detail['uploaded_by_name']?.toString() ??
+            detail['uploaded_by']?.toString() ??
+            'Admin User';
+        isGeneratedAssignment.value = detail['is_generated'] == true &&
+            (detail['generator_type']?.toString() ?? '') == 'surat_tugas';
+        isPendingAssignmentApproval.value = isGeneratedAssignment.value &&
+            ((detail['generator_status']?.toString() ?? '') ==
+                    'pending_approval' ||
+                (detail['status']?.toString() ?? '') == 'pending_approval');
+        assignmentWorkflowMessage.value = _buildAssignmentWorkflowMessage();
 
         mimetype.value = detail['mimetype'] ?? 'image/jpeg';
 
@@ -667,6 +693,53 @@ class ArchiveDetailController extends GetxController {
     } catch (e) {
       print('Extract reminder prefill error: $e');
       return const {};
+    }
+  }
+
+  String _buildAssignmentWorkflowMessage() {
+    if (!isGeneratedAssignment.value) return '';
+    if (isPendingAssignmentApproval.value) {
+      if (apiService.isOwner) {
+        return 'Permintaan surat tugas dari ${uploadedBy.value} menunggu persetujuan Anda untuk diterbitkan ke PDF dan diunggah ke Google Drive.';
+      }
+      return 'Surat tugas ini sudah dikirim ke owner dan sedang menunggu persetujuan untuk diterbitkan ke PDF.';
+    }
+    return 'Surat tugas ini sudah diterbitkan ke PDF dan tersimpan di Google Drive organisasi.';
+  }
+
+  Future<void> approveAssignmentRequest() async {
+    if (!apiService.isOwner || !isPendingAssignmentApproval.value) return;
+
+    isLoading.value = true;
+    try {
+      final result = await apiService.approveSuratTugasRequest(document.id);
+      if (result != null) {
+        await fetchDetailedData();
+        if (Get.isRegistered<ArchiveController>()) {
+          await Get.find<ArchiveController>().fetchDocuments();
+        }
+        Get.snackbar(
+          'Surat Tugas Diterbitkan',
+          'PDF berhasil dibuat dan diunggah ke Google Drive organisasi.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.withOpacity(0.9),
+          colorText: Colors.white,
+        );
+      } else {
+        Get.snackbar(
+          'Gagal',
+          'Owner belum dapat menerbitkan surat tugas ini. Pastikan Google Drive owner sudah terhubung.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Terjadi kesalahan saat menerbitkan surat tugas: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      isLoading.value = false;
     }
   }
 

@@ -507,7 +507,8 @@ class ApiService extends GetxService {
 
   Future<Map<String, dynamic>?> getDocumentDetail(String docId) async {
     try {
-      final response = await _get('/document/$docId');
+      final safeDocId = Uri.encodeComponent(docId);
+      final response = await _get('/document/$safeDocId');
       if (response.statusCode == 200) {
         return response.body as Map<String, dynamic>;
       }
@@ -519,7 +520,8 @@ class ApiService extends GetxService {
 
   Future<List<int>?> downloadDocumentBytes(String docId) async {
     try {
-      final uri = Uri.parse('${baseUrl.value}/document/download/$docId');
+      final safeDocId = Uri.encodeComponent(docId);
+      final uri = Uri.parse('${baseUrl.value}/document/download/$safeDocId');
 
       final response = await http.get(
         uri,
@@ -569,7 +571,8 @@ class ApiService extends GetxService {
 
   Future<bool> deleteDocument(String docId) async {
     try {
-      final response = await _delete('/document/$docId');
+      final safeDocId = Uri.encodeComponent(docId);
+      final response = await _delete('/document/$safeDocId');
       return response.statusCode == 200;
     } catch (e) {
       print("Delete document error: $e");
@@ -579,7 +582,8 @@ class ApiService extends GetxService {
 
   Future<bool> dispositionDocument(String docId, String delegationId) async {
     try {
-      final response = await _post('/document/disposition/$docId', {
+      final safeDocId = Uri.encodeComponent(docId);
+      final response = await _post('/document/disposition/$safeDocId', {
         'delegation_id': delegationId,
       });
       return response.statusCode == 200;
@@ -592,6 +596,7 @@ class ApiService extends GetxService {
   Future<Map<String, dynamic>?> replaceDocument(String docId,
       {List<int>? bytes, String? filename, String? text}) async {
     try {
+      final safeDocId = Uri.encodeComponent(docId);
       dynamic payload;
       if (bytes != null && filename != null) {
         String contentType = 'image/jpeg';
@@ -614,7 +619,7 @@ class ApiService extends GetxService {
         return null;
       }
 
-      final response = await _put('/document/replace/$docId', payload);
+      final response = await _put('/document/replace/$safeDocId', payload);
       if (response.statusCode == 200) {
         return response.body as Map<String, dynamic>;
       }
@@ -911,6 +916,18 @@ class ApiService extends GetxService {
       }
     } catch (e) {
       print("Generate surat tugas error: $e");
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> approveSuratTugasRequest(String docId) async {
+    try {
+      final response = await _post('/generator/surat-tugas/$docId/approve', {});
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return response.body as Map<String, dynamic>;
+      }
+    } catch (e) {
+      print("Approve surat tugas error: $e");
     }
     return null;
   }

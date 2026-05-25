@@ -471,8 +471,10 @@ class ArchiveView extends GetView<ArchiveController> {
   }
 
   Widget _buildStatusBadge(String status) {
-    final isApproved = status == 'Approved';
-    final isProcessing = status == 'processing';
+    final normalized = status.toLowerCase();
+    final isApproved = status == 'Approved' || normalized == 'processed';
+    final isProcessing = normalized == 'processing';
+    final isPendingApproval = normalized == 'pending_approval';
 
     Color badgeColor = AppTheme.secondaryContainer.withOpacity(0.3);
     Color textColor = AppTheme.onSecondaryContainer;
@@ -487,6 +489,10 @@ class ArchiveView extends GetView<ArchiveController> {
       textColor = AppTheme.primary;
       icon =
           const Icon(LucideIcons.hourglass, size: 10, color: AppTheme.primary);
+    } else if (isPendingApproval) {
+      badgeColor = Colors.orange.withOpacity(0.12);
+      textColor = Colors.orange;
+      icon = const Icon(LucideIcons.clock, size: 10, color: Colors.orange);
     }
 
     return Container(
@@ -503,7 +509,13 @@ class ArchiveView extends GetView<ArchiveController> {
             const SizedBox(width: 4),
           ],
           Text(
-            isProcessing ? 'Processing' : status,
+            isApproved
+                ? 'Processed'
+                : isProcessing
+                    ? 'Processing'
+                    : isPendingApproval
+                        ? 'Pending Approval'
+                        : status,
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.bold,

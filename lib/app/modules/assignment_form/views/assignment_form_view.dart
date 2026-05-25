@@ -179,7 +179,9 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
                             ? 'Memproses...'
                             : controller.isAssetsMissing.value
                                 ? 'Kop / TTD Belum Aktif'
-                                : 'Konfirmasi Surat Jalan',
+                                : isOwner
+                                    ? 'Terbitkan PDF Surat Tugas'
+                                    : 'Kirim Request ke Owner',
                         style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,

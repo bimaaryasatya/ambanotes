@@ -166,14 +166,26 @@ class AssignmentFormController extends GetxController {
       isLoading.value = false;
 
       if (result != null) {
-        Get.back(); // go back to details
-        Get.snackbar(
-          'Sukses', 
-          'Surat tugas berhasil dibuat dan didaftarkan ke sistem.', 
-          backgroundColor: Colors.green.withOpacity(0.1), 
-          colorText: Colors.green,
-          snackPosition: SnackPosition.BOTTOM
-        );
+        final status = result['status']?.toString() ?? '';
+        Get.back();
+
+        if (status == 'pending_approval') {
+          Get.snackbar(
+            'Request Terkirim',
+            'Permintaan surat tugas berhasil dikirim ke owner untuk diterbitkan ke PDF.',
+            backgroundColor: Colors.blue.withOpacity(0.1),
+            colorText: Colors.blue,
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        } else {
+          Get.snackbar(
+            'Sukses',
+            'Surat tugas berhasil diterbitkan ke PDF dan diunggah ke Google Drive.',
+            backgroundColor: Colors.green.withOpacity(0.1),
+            colorText: Colors.green,
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }
       } else {
         Get.snackbar(
           'Error', 

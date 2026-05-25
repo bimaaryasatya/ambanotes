@@ -305,7 +305,7 @@ class ArchiveController extends GetxController {
       } else {
         Get.snackbar(
           'Deletion Failed',
-          'Could not delete document. Ensure you are an organization Owner.',
+          'Dokumen tidak dapat dihapus. Periksa koneksi server/Google Drive atau coba login ulang sebagai owner.',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.orange.withOpacity(0.8),
           colorText: Colors.white,

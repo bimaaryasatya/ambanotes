@@ -60,6 +60,9 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
                 ],
                 _buildMetadataSection(),
                 const SizedBox(height: 16),
+                _buildAssignmentWorkflowCard(),
+                if (controller.isGeneratedAssignment.value)
+                  const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -257,14 +260,17 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
   }
 
   Widget _buildStatusBadge(String status) {
-    final isApproved =
-        status == 'Approved' || status.toLowerCase() == 'processed';
+    final normalized = status.toLowerCase();
+    final isApproved = status == 'Approved' || normalized == 'processed';
+    final isPendingApproval = normalized == 'pending_approval';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: isApproved
             ? Colors.green.withOpacity(0.1)
-            : AppTheme.secondaryContainer.withOpacity(0.3),
+            : isPendingApproval
+                ? Colors.orange.withOpacity(0.12)
+                : AppTheme.secondaryContainer.withOpacity(0.3),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -273,18 +279,102 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
           if (isApproved) ...[
             const Icon(LucideIcons.checkCircle, size: 12, color: Colors.green),
             const SizedBox(width: 4),
+          ] else if (isPendingApproval) ...[
+            const Icon(LucideIcons.clock, size: 12, color: Colors.orange),
+            const SizedBox(width: 4),
           ],
           Text(
-            isApproved ? 'Processed' : status,
+            isApproved
+                ? 'Processed'
+                : isPendingApproval
+                    ? 'Pending Approval'
+                    : status,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: isApproved ? Colors.green : AppTheme.onSecondaryContainer,
+              color: isApproved
+                  ? Colors.green
+                  : isPendingApproval
+                      ? Colors.orange
+                      : AppTheme.onSecondaryContainer,
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildAssignmentWorkflowCard() {
+    return Obx(() {
+      if (!controller.isGeneratedAssignment.value) {
+        return const SizedBox.shrink();
+      }
+
+      final isPending = controller.isPendingAssignmentApproval.value;
+      final isOwner = controller.apiService.isOwner;
+      final accent = isPending ? Colors.orange : Colors.green;
+      final icon = isPending ? LucideIcons.clock : LucideIcons.checkCircle;
+
+      return Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: accent.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: accent.withOpacity(0.25)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: accent),
+                const SizedBox(width: 10),
+                Text(
+                  isPending ? 'Workflow Surat Tugas' : 'PDF Surat Tugas Aktif',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: accent,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              controller.assignmentWorkflowMessage.value,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppTheme.onSurfaceVariant,
+                height: 1.45,
+              ),
+            ),
+            if (isPending && isOwner) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: controller.approveAssignmentRequest,
+                  icon: const Icon(LucideIcons.checkCircle, color: Colors.white),
+                  label: const Text(
+                    'Terbitkan PDF & Upload ke Google Drive',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildAISummaryCard() {
