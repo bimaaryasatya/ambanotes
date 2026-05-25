@@ -315,7 +315,7 @@ class ArchiveController extends GetxController {
   }
 
   void enterSelectionMode(String id) {
-    selectedDocIds.value = {...selectedDocIds, id};
+    selectedDocIds.add(id);
     selectedDocIds.refresh();
     isSelectionMode.value = true;
   }
@@ -329,7 +329,9 @@ class ArchiveController extends GetxController {
       updatedIds.add(id);
     }
 
-    selectedDocIds.value = updatedIds;
+    selectedDocIds
+      ..clear()
+      ..addAll(updatedIds);
     selectedDocIds.refresh();
 
     if (selectedDocIds.isEmpty) {
@@ -338,7 +340,7 @@ class ArchiveController extends GetxController {
   }
 
   void clearSelection() {
-    selectedDocIds.value = {};
+    selectedDocIds.clear();
     selectedDocIds.refresh();
     isSelectionMode.value = false;
   }
@@ -355,10 +357,10 @@ class ArchiveController extends GetxController {
 
     if (selectedDocIds.length == visibleIds.length &&
         selectedDocIds.containsAll(visibleIds)) {
-      selectedDocIds.value = {};
+      selectedDocIds.clear();
       isSelectionMode.value = false;
     } else {
-      selectedDocIds.value = visibleIds;
+      selectedDocIds.assignAll(visibleIds);
     }
     selectedDocIds.refresh();
   }
