@@ -1,4 +1,5 @@
 import 'package:ambanotes/app/theme/app_theme.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -13,6 +14,17 @@ import 'help_center_view.dart';
 
 class ProfileView extends GetView<ProfileController> {
   const ProfileView({Key? key}) : super(key: key);
+
+  Uint8List? _decodeProfileImage(String? rawValue) {
+    if (rawValue == null || rawValue.isEmpty) return null;
+    try {
+      final normalized =
+          rawValue.contains(',') ? rawValue.split(',').last : rawValue;
+      return base64Decode(normalized);
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +67,8 @@ class ProfileView extends GetView<ProfileController> {
   }
 
   Widget _buildHeaderCard() {
+    final profileImageBytes =
+        _decodeProfileImage(controller.profileImage.value);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -71,26 +85,89 @@ class ProfileView extends GetView<ProfileController> {
           ]),
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                  color: AppTheme.primary.withOpacity(0.2), width: 2),
-            ),
-            child: const CircleAvatar(
-              radius: 40,
-              backgroundImage: NetworkImage(
-                  'https://lh3.googleusercontent.com/aida-public/AB6AXuDmU6mMwiX67PUwAXsSeel6gR6OcCaGid7ocK9MoDsDXFStorjDCsvKbQHT2Vm0fUGtCM1YVhoEhJMe5kNYPOIAbfhqNP28Wp6EGhevy3WIPRrObwRIAeRUnLZIJQ7rwkO133r4qEX6HRgzf5ZBocAlxCoHhPtJVLpMvUSQfGFQ95yNwh9RlBu37TYcaHmWzW74vVSV3crHQnydSGuM288kkNwQMBTzMthQBsYMEqFFe6pDYB6k0nnrHLmNZ1ygQmD4j0kggcdubE8z'),
-            ),
+          Stack(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: AppTheme.primary.withOpacity(0.2), width: 2),
+                ),
+                child: CircleAvatar(
+                  radius: 40,
+                  backgroundColor: AppTheme.primary.withOpacity(0.1),
+                  backgroundImage: profileImageBytes != null
+                      ? MemoryImage(profileImageBytes)
+                      : null,
+                  child: profileImageBytes == null
+                      ? Text(
+                          controller.username.value.isNotEmpty
+                              ? controller.username.value[0].toUpperCase()
+                              : 'A',
+                          style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primary),
+                        )
+                      : null,
+                ),
+              ),
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: InkWell(
+                  onTap: controller.editProfilePhoto,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: const Icon(
+                      LucideIcons.camera,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          Text(
-            controller.username.value.toUpperCase(),
-            style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.onSurface),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Text(
+                  controller.username.value.toUpperCase(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.onSurface),
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: controller.editProfile,
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Icon(
+                    LucideIcons.pencil,
+                    size: 14,
+                    color: AppTheme.primary,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 4),
           Text(
@@ -98,45 +175,62 @@ class ProfileView extends GetView<ProfileController> {
             style: const TextStyle(fontSize: 13, color: AppTheme.outline),
           ),
           const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(LucideIcons.building2,
-                    size: 14, color: AppTheme.primary),
-                const SizedBox(width: 8),
-                Text(
-                  controller.orgName.value.toUpperCase(),
-                  style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+          InkWell(
+            onTap: controller.apiService.isOwner
+                ? controller.editOrganizationName
+                : null,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(LucideIcons.building2,
+                      size: 14, color: AppTheme.primary),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      controller.orgName.value.toUpperCase(),
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primary,
+                          letterSpacing: 0.5),
+                    ),
+                  ),
+                  if (controller.apiService.isOwner) ...[
+                    const SizedBox(width: 8),
+                    const Icon(
+                      LucideIcons.pencil,
+                      size: 12,
                       color: AppTheme.primary,
-                      letterSpacing: 0.5),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: controller.role.value == 'owner'
-                        ? Colors.purple
-                        : AppTheme.secondary,
-                    borderRadius: BorderRadius.circular(8),
+                    ),
+                  ],
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: controller.role.value == 'owner'
+                          ? Colors.purple
+                          : AppTheme.secondary,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      controller.role.value.toUpperCase(),
+                      style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white),
+                    ),
                   ),
-                  child: Text(
-                    controller.role.value.toUpperCase(),
-                    style: const TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           if (controller.role.value == 'owner' &&

@@ -29,14 +29,16 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
 
                 // Missing assets warning banner
                 Obx(() {
-                  if (!controller.isAssetsMissing.value) return const SizedBox.shrink();
+                  if (!controller.isAssetsMissing.value)
+                    return const SizedBox.shrink();
                   return Container(
                     margin: const EdgeInsets.only(bottom: 20),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Colors.orange.withOpacity(0.09),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.orange.withOpacity(0.45)),
+                      border:
+                          Border.all(color: Colors.orange.withOpacity(0.45)),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,8 +128,9 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
                   label: 'Nomor Surat',
                   controller: controller.letterNumberController,
                   icon: LucideIcons.hash,
-                  validator: (val) =>
-                      val == null || val.isEmpty ? 'Nomor surat wajib diisi' : null,
+                  validator: (val) => val == null || val.isEmpty
+                      ? 'Nomor surat wajib diisi'
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 _buildDateTimeField(
@@ -151,12 +154,14 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
                   validator: (val) =>
                       val == null || val.isEmpty ? 'Tempat wajib diisi' : null,
                 ),
+                const SizedBox(height: 16),
+                _buildCurrentLocationCard(),
                 const SizedBox(height: 40),
 
                 // Submit button
                 Obx(() {
-                  final disabled =
-                      controller.isLoading.value || controller.isAssetsMissing.value;
+                  final disabled = controller.isLoading.value ||
+                      controller.isAssetsMissing.value;
                   return SizedBox(
                     width: double.infinity,
                     height: 56,
@@ -188,9 +193,8 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
                             color: Colors.white),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: disabled
-                            ? Colors.grey.shade400
-                            : AppTheme.primary,
+                        backgroundColor:
+                            disabled ? Colors.grey.shade400 : AppTheme.primary,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16)),
                         elevation: disabled ? 0 : 2,
@@ -310,8 +314,8 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: const TextStyle(
-                        fontSize: 12, color: AppTheme.outline)),
+                    style:
+                        const TextStyle(fontSize: 12, color: AppTheme.outline)),
                 Obx(() => Text(
                       displayValue(),
                       style: const TextStyle(
@@ -347,7 +351,8 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
                   children: [
                     Text(
                       label,
-                      style: const TextStyle(fontSize: 10, color: AppTheme.outline),
+                      style: const TextStyle(
+                          fontSize: 10, color: AppTheme.outline),
                     ),
                     const SizedBox(height: 3),
                     Text(
@@ -372,5 +377,76 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
             ],
           ),
         ));
+  }
+
+  Widget _buildCurrentLocationCard() {
+    return Obx(() {
+      final isLoading = controller.isDetectingCurrentLocation.value;
+      final label = controller.currentLocationLabel.value;
+      final isDenied = controller.isCurrentLocationDenied.value;
+
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppTheme.primary.withOpacity(0.04),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppTheme.outlineVariant),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  LucideIcons.mapPin,
+                  size: 18,
+                  color: AppTheme.primary,
+                ),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Lokasi Terkini untuk PDF',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.onSurface,
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed:
+                      isLoading ? null : controller.detectCurrentLocationForPdf,
+                  icon: isLoading
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(LucideIcons.refreshCw, size: 14),
+                  label: Text(isLoading ? 'Mendeteksi' : 'Muat Ulang'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label.isNotEmpty
+                  ? label
+                  : isDenied
+                      ? 'Izin lokasi tidak diberikan. Lokasi terkini tidak akan ditulis di PDF.'
+                      : 'Lokasi terkini belum tersedia. Jika lokasi perangkat aktif, sistem akan menambahkannya di atas TTD PDF.',
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.45,
+                color: label.isNotEmpty
+                    ? AppTheme.onSurface
+                    : isDenied
+                        ? Colors.orange.shade800
+                        : AppTheme.outline,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }

@@ -14,7 +14,9 @@ class ApiService extends GetxService {
   final orgId = RxnString();
   final delegationId = RxnString();
   final delegationName = RxnString();
+  final organizationName = RxnString();
   final inviteCode = RxnString();
+  final profileImage = RxnString();
   final googleDriveConnected = false.obs;
 
   bool get isAuthenticated => token.value != null;
@@ -149,11 +151,57 @@ class ApiService extends GetxService {
         orgId.value = body['org_id'];
         delegationId.value = body['delegation_id'];
         delegationName.value = body['delegation_name'] ?? 'General';
+        organizationName.value = body['org_name'] ?? 'Personal Workspace';
         inviteCode.value = body['invite_code'];
+        profileImage.value = body['profile_image'];
         googleDriveConnected.value = body['google_drive_connected'] == true;
       }
     } catch (e) {
       print("Get profile error: $e");
+    }
+  }
+
+  Future<bool> updateProfile(
+      {String? username, String? profileImageData}) async {
+    try {
+      final body = <String, dynamic>{};
+      if (username != null) body['username'] = username;
+      if (profileImageData != null) body['profile_image'] = profileImageData;
+
+      final response = await _put('/auth/profile', body);
+      if (response.statusCode == 200) {
+        await getProfile();
+        return true;
+      }
+
+      final errMsg = response.body?['error'] ?? 'Gagal memperbarui profil.';
+      Get.snackbar('Gagal Memperbarui', errMsg,
+          snackPosition: SnackPosition.BOTTOM);
+      return false;
+    } catch (e) {
+      Get.snackbar('Kesalahan Jaringan', 'Gagal menghubungi server: $e',
+          snackPosition: SnackPosition.BOTTOM);
+      return false;
+    }
+  }
+
+  Future<bool> updateOrganizationName(String name) async {
+    try {
+      final response = await _put('/auth/organization', {'name': name});
+      if (response.statusCode == 200) {
+        await getProfile();
+        return true;
+      }
+
+      final errMsg =
+          response.body?['error'] ?? 'Gagal memperbarui nama organisasi.';
+      Get.snackbar('Gagal Memperbarui', errMsg,
+          snackPosition: SnackPosition.BOTTOM);
+      return false;
+    } catch (e) {
+      Get.snackbar('Kesalahan Jaringan', 'Gagal menghubungi server: $e',
+          snackPosition: SnackPosition.BOTTOM);
+      return false;
     }
   }
 
@@ -898,6 +946,7 @@ class ApiService extends GetxService {
     required String date,
     required String time,
     required String location,
+    String? currentLocationLabel,
     required String kop,
     String? ttd,
   }) async {
@@ -908,6 +957,7 @@ class ApiService extends GetxService {
         'date': date,
         'time': time,
         'location': location,
+        'current_location_label': currentLocationLabel ?? '',
         'kop': kop,
         'ttd': ttd ?? '',
       });
@@ -941,6 +991,8 @@ class ApiService extends GetxService {
     orgId.value = null;
     delegationId.value = null;
     delegationName.value = null;
+    organizationName.value = null;
+    profileImage.value = null;
     googleDriveConnected.value = false;
   }
 }
