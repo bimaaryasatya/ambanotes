@@ -1,5 +1,6 @@
 import 'package:ambanotes/app/theme/app_theme.dart';
 import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -14,6 +15,17 @@ import 'help_center_view.dart';
 
 class ProfileView extends GetView<ProfileController> {
   const ProfileView({Key? key}) : super(key: key);
+
+  Uint8List? _decodeProfileImage(String? rawValue) {
+    if (rawValue == null || rawValue.isEmpty) return null;
+    try {
+      final normalized =
+          rawValue.contains(',') ? rawValue.split(',').last : rawValue;
+      return base64Decode(normalized);
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,9 +72,8 @@ class ProfileView extends GetView<ProfileController> {
     final rawImage = controller.profileImageData.value.trim();
     if (rawImage.isNotEmpty) {
       try {
-        final clean = rawImage.contains(',')
-            ? rawImage.split(',').last
-            : rawImage;
+        final clean =
+            rawImage.contains(',') ? rawImage.split(',').last : rawImage;
         avatarImage = MemoryImage(base64Decode(clean));
       } catch (_) {
         avatarImage = null;

@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:ambanotes/app/theme/app_theme.dart';
 import '../../../data/services/api_service.dart';
 import '../../../data/services/theme_service.dart';
 
@@ -14,7 +15,7 @@ class ProfileController extends GetxController {
   final themeService = Get.find<ThemeService>();
 
   final isLoading = false.obs;
-  
+
   // Profile stats
   final username = ''.obs;
   final email = ''.obs;
@@ -27,7 +28,7 @@ class ProfileController extends GetxController {
   // Google Drive state
   final isDriveConnected = false.obs;
   final isMigrating = false.obs;
-  
+
   // Organization members
   final members = <Map<String, dynamic>>[].obs;
   final inviteEmailController = TextEditingController();
@@ -77,7 +78,8 @@ class ProfileController extends GetxController {
   Future<void> inviteMember() async {
     final emailText = inviteEmailController.text.trim();
     if (emailText.isEmpty) {
-      Get.snackbar('Input Error', 'Silakan masukkan email yang valid.', backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
+      Get.snackbar('Input Error', 'Silakan masukkan email yang valid.',
+          backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
       return;
     }
 
@@ -86,13 +88,11 @@ class ProfileController extends GetxController {
       // Pass both email and role ('member') to the backend
       final success = await apiService.inviteMember(emailText, 'member');
       if (success) {
-        Get.snackbar(
-          'Undangan Terkirim', 
-          'Undangan berhasil dikirim ke $emailText. Berkas lama akan termigrasi setelah mereka mendaftar!', 
-          backgroundColor: Colors.green.withOpacity(0.1), 
-          colorText: Colors.green,
-          snackPosition: SnackPosition.BOTTOM
-        );
+        Get.snackbar('Undangan Terkirim',
+            'Undangan berhasil dikirim ke $emailText. Berkas lama akan termigrasi setelah mereka mendaftar!',
+            backgroundColor: Colors.green.withOpacity(0.1),
+            colorText: Colors.green,
+            snackPosition: SnackPosition.BOTTOM);
         inviteEmailController.clear();
         fetchProfileData(); // reload members
       } else {
@@ -112,19 +112,20 @@ class ProfileController extends GetxController {
         print("Google OAuth URL: $url");
         final uri = Uri.parse(url);
         if (await canLaunchUrl(uri)) {
-          Get.snackbar('Google OAuth', 'Membuka portal otorisasi Google Drive...', backgroundColor: Colors.blue.withOpacity(0.1), colorText: Colors.blue);
+          Get.snackbar(
+              'Google OAuth', 'Membuka portal otorisasi Google Drive...',
+              backgroundColor: Colors.blue.withOpacity(0.1),
+              colorText: Colors.blue);
           await launchUrl(uri, mode: LaunchMode.externalApplication);
         } else {
           // Fallback ke Clipboard jika gagal membuka browser otomatis
           await Clipboard.setData(ClipboardData(text: url));
-          Get.snackbar(
-            'Google OAuth', 
-            'Gagal membuka browser otomatis. Link otorisasi disalin ke clipboard! Tempel di browser Anda.', 
-            backgroundColor: Colors.blue.withOpacity(0.1), 
-            colorText: Colors.blue,
-            duration: const Duration(seconds: 8),
-            snackPosition: SnackPosition.BOTTOM
-          );
+          Get.snackbar('Google OAuth',
+              'Gagal membuka browser otomatis. Link otorisasi disalin ke clipboard! Tempel di browser Anda.',
+              backgroundColor: Colors.blue.withOpacity(0.1),
+              colorText: Colors.blue,
+              duration: const Duration(seconds: 8),
+              snackPosition: SnackPosition.BOTTOM);
         }
       }
     } catch (e) {
@@ -139,20 +140,15 @@ class ProfileController extends GetxController {
       if (success) {
         isDriveConnected.value = false;
         Get.snackbar(
-          'Google Drive', 
-          'Koneksi Google Drive berhasil diputuskan.', 
-          backgroundColor: Colors.green.withOpacity(0.1), 
-          colorText: Colors.green,
-          snackPosition: SnackPosition.BOTTOM
-        );
+            'Google Drive', 'Koneksi Google Drive berhasil diputuskan.',
+            backgroundColor: Colors.green.withOpacity(0.1),
+            colorText: Colors.green,
+            snackPosition: SnackPosition.BOTTOM);
       } else {
-        Get.snackbar(
-          'Error', 
-          'Gagal memutuskan koneksi Google Drive.', 
-          backgroundColor: Colors.red.withOpacity(0.1), 
-          colorText: Colors.red,
-          snackPosition: SnackPosition.BOTTOM
-        );
+        Get.snackbar('Error', 'Gagal memutuskan koneksi Google Drive.',
+            backgroundColor: Colors.red.withOpacity(0.1),
+            colorText: Colors.red,
+            snackPosition: SnackPosition.BOTTOM);
       }
     } catch (e) {
       print("Disconnect Google Drive error: $e");
@@ -171,24 +167,36 @@ class ProfileController extends GetxController {
         final failed = data['failed_count'] ?? 0;
 
         if (total == 0) {
-          Get.snackbar('Migrasi', 'Tidak ada berkas lokal baru yang perlu dipindahkan.', 
-              backgroundColor: Colors.blue.withOpacity(0.1), colorText: Colors.blue);
+          Get.snackbar(
+              'Migrasi', 'Tidak ada berkas lokal baru yang perlu dipindahkan.',
+              backgroundColor: Colors.blue.withOpacity(0.1),
+              colorText: Colors.blue);
         } else if (success == total) {
-          Get.snackbar('Migrasi Sukses', 'Semua berkas lokal ($success/$total) berhasil dipindahkan ke Google Drive!', 
-              backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green);
+          Get.snackbar('Migrasi Sukses',
+              'Semua berkas lokal ($success/$total) berhasil dipindahkan ke Google Drive!',
+              backgroundColor: Colors.green.withOpacity(0.1),
+              colorText: Colors.green);
         } else if (success > 0 && failed > 0) {
-          Get.snackbar('Migrasi Parsial', 'Berhasil memindahkan $success berkas, tetapi $failed berkas gagal dipindahkan.', 
-              backgroundColor: Colors.amber.withOpacity(0.1), colorText: Colors.amber);
+          Get.snackbar('Migrasi Parsial',
+              'Berhasil memindahkan $success berkas, tetapi $failed berkas gagal dipindahkan.',
+              backgroundColor: Colors.amber.withOpacity(0.1),
+              colorText: Colors.amber);
         } else {
-          Get.snackbar('Migrasi Gagal', 'Gagal memindahkan berkas. Semua dokumen ($failed) gagal diunggah.', 
-              backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
+          Get.snackbar('Migrasi Gagal',
+              'Gagal memindahkan berkas. Semua dokumen ($failed) gagal diunggah.',
+              backgroundColor: Colors.red.withOpacity(0.1),
+              colorText: Colors.red);
         }
       } else {
-        Get.snackbar('Migrasi Gagal', 'Gagal memindahkan berkas.', backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
+        Get.snackbar('Migrasi Gagal', 'Gagal memindahkan berkas.',
+            backgroundColor: Colors.red.withOpacity(0.1),
+            colorText: Colors.red);
       }
     } catch (e) {
       print("Migrate error: $e");
-      Get.snackbar('Migrasi Gagal', 'Terjadi kesalahan saat memindahkan berkas.', backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
+      Get.snackbar(
+          'Migrasi Gagal', 'Terjadi kesalahan saat memindahkan berkas.',
+          backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
     } finally {
       isMigrating.value = false;
     }
@@ -222,12 +230,14 @@ class ProfileController extends GetxController {
     final confirmPass = confirmPasswordController.text;
 
     if (oldPass.isEmpty || newPass.isEmpty || confirmPass.isEmpty) {
-      Get.snackbar('Input Error', 'Semua kolom password harus diisi.', backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
+      Get.snackbar('Input Error', 'Semua kolom password harus diisi.',
+          backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
       return;
     }
 
     if (newPass != confirmPass) {
-      Get.snackbar('Input Error', 'Konfirmasi password baru tidak cocok.', backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
+      Get.snackbar('Input Error', 'Konfirmasi password baru tidak cocok.',
+          backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
       return;
     }
 
@@ -236,12 +246,10 @@ class ProfileController extends GetxController {
       final success = await apiService.changePassword(oldPass, newPass);
       if (success) {
         Get.snackbar(
-          'Password Diperbarui', 
-          'Password Anda berhasil diperbarui.', 
-          backgroundColor: Colors.green.withOpacity(0.1), 
-          colorText: Colors.green,
-          snackPosition: SnackPosition.BOTTOM
-        );
+            'Password Diperbarui', 'Password Anda berhasil diperbarui.',
+            backgroundColor: Colors.green.withOpacity(0.1),
+            colorText: Colors.green,
+            snackPosition: SnackPosition.BOTTOM);
         oldPasswordController.clear();
         newPasswordController.clear();
         confirmPasswordController.clear();
@@ -259,12 +267,10 @@ class ProfileController extends GetxController {
       final success = await apiService.deleteAccount();
       if (success) {
         Get.snackbar(
-          'Akun Dihapus', 
-          'Akun Anda telah berhasil dihapus selamanya.', 
-          backgroundColor: Colors.green.withOpacity(0.1), 
-          colorText: Colors.green,
-          snackPosition: SnackPosition.BOTTOM
-        );
+            'Akun Dihapus', 'Akun Anda telah berhasil dihapus selamanya.',
+            backgroundColor: Colors.green.withOpacity(0.1),
+            colorText: Colors.green,
+            snackPosition: SnackPosition.BOTTOM);
         logout();
       }
     } catch (e) {
@@ -400,7 +406,8 @@ class ProfileController extends GetxController {
     if (selectedDelegationIds.length == delegations.length) {
       selectedDelegationIds.clear();
     } else {
-      selectedDelegationIds.assignAll(delegations.map((a) => a['_id'] as String));
+      selectedDelegationIds
+          .assignAll(delegations.map((a) => a['_id'] as String));
     }
   }
 
@@ -411,8 +418,10 @@ class ProfileController extends GetxController {
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Hapus Divisi Terpilih', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text('Apakah Anda yakin ingin menghapus $count divisi yang dipilih? Semua anggota di dalam divisi tersebut akan dipindahkan ke General (tanpa divisi).',
+        title: const Text('Hapus Divisi Terpilih',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(
+            'Apakah Anda yakin ingin menghapus $count divisi yang dipilih? Semua anggota di dalam divisi tersebut akan dipindahkan ke General (tanpa divisi).',
             style: const TextStyle(fontSize: 13, color: Colors.grey)),
         actions: [
           TextButton(
@@ -421,7 +430,9 @@ class ProfileController extends GetxController {
           ),
           TextButton(
             onPressed: () => Get.back(result: true),
-            child: const Text('Hapus Semua', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+            child: const Text('Hapus Semua',
+                style:
+                    TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
           ),
         ],
       ),
@@ -435,8 +446,11 @@ class ProfileController extends GetxController {
         final ok = await apiService.deleteDelegation(id);
         if (ok) successCount++;
       }
-      Get.snackbar('Berhasil', '$successCount dari $count divisi berhasil dihapus.',
-        backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green, snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+          'Berhasil', '$successCount dari $count divisi berhasil dihapus.',
+          backgroundColor: Colors.green.withOpacity(0.1),
+          colorText: Colors.green,
+          snackPosition: SnackPosition.BOTTOM);
       selectedDelegationIds.clear();
       isDelegationSelectionMode.value = false;
       await fetchDelegations();
@@ -463,13 +477,17 @@ class ProfileController extends GetxController {
     try {
       final success = await apiService.createDelegation(name);
       if (success) {
-        Get.snackbar('Sukses', 'Delegasi "$name" berhasil dibuat.', 
-            backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green, snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar('Sukses', 'Delegasi "$name" berhasil dibuat.',
+            backgroundColor: Colors.green.withOpacity(0.1),
+            colorText: Colors.green,
+            snackPosition: SnackPosition.BOTTOM);
         delegationNameController.clear();
         await fetchDelegations();
       } else {
-        Get.snackbar('Gagal', 'Gagal membuat delegasi.', 
-            backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red, snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar('Gagal', 'Gagal membuat delegasi.',
+            backgroundColor: Colors.red.withOpacity(0.1),
+            colorText: Colors.red,
+            snackPosition: SnackPosition.BOTTOM);
       }
     } catch (e) {
       print("Create delegation error: $e");
@@ -484,13 +502,17 @@ class ProfileController extends GetxController {
     try {
       final success = await apiService.updateDelegation(id, name);
       if (success) {
-        Get.snackbar('Sukses', 'Delegasi berhasil diubah nama menjadi "$name".', 
-            backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green, snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar('Sukses', 'Delegasi berhasil diubah nama menjadi "$name".',
+            backgroundColor: Colors.green.withOpacity(0.1),
+            colorText: Colors.green,
+            snackPosition: SnackPosition.BOTTOM);
         await fetchDelegations();
         await fetchProfileData();
       } else {
-        Get.snackbar('Gagal', 'Gagal mengubah nama delegasi.', 
-            backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red, snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar('Gagal', 'Gagal mengubah nama delegasi.',
+            backgroundColor: Colors.red.withOpacity(0.1),
+            colorText: Colors.red,
+            snackPosition: SnackPosition.BOTTOM);
       }
     } catch (e) {
       print("Rename delegation error: $e");
@@ -504,13 +526,18 @@ class ProfileController extends GetxController {
     try {
       final success = await apiService.deleteDelegation(id);
       if (success) {
-        Get.snackbar('Sukses', 'Delegasi berhasil dihapus dan semua anggota dialihkan ke general.', 
-            backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green, snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar('Sukses',
+            'Delegasi berhasil dihapus dan semua anggota dialihkan ke general.',
+            backgroundColor: Colors.green.withOpacity(0.1),
+            colorText: Colors.green,
+            snackPosition: SnackPosition.BOTTOM);
         await fetchDelegations();
         await fetchProfileData();
       } else {
-        Get.snackbar('Gagal', 'Gagal menghapus delegasi.', 
-            backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red, snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar('Gagal', 'Gagal menghapus delegasi.',
+            backgroundColor: Colors.red.withOpacity(0.1),
+            colorText: Colors.red,
+            snackPosition: SnackPosition.BOTTOM);
       }
     } catch (e) {
       print("Delete delegation error: $e");
@@ -519,17 +546,23 @@ class ProfileController extends GetxController {
     }
   }
 
-  Future<void> moveMemberDelegation(String targetUserId, String newDelegationId) async {
+  Future<void> moveMemberDelegation(
+      String targetUserId, String newDelegationId) async {
     isLoading.value = true;
     try {
-      final success = await apiService.changeDelegation(targetUserId, newDelegationId);
+      final success =
+          await apiService.changeDelegation(targetUserId, newDelegationId);
       if (success) {
-        Get.snackbar('Sukses', 'Anggota berhasil dipindahkan delegasi/divisi.', 
-            backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green, snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar('Sukses', 'Anggota berhasil dipindahkan delegasi/divisi.',
+            backgroundColor: Colors.green.withOpacity(0.1),
+            colorText: Colors.green,
+            snackPosition: SnackPosition.BOTTOM);
         await fetchProfileData(); // reload members list
       } else {
-        Get.snackbar('Gagal', 'Gagal memindahkan anggota ke delegasi.', 
-            backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red, snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar('Gagal', 'Gagal memindahkan anggota ke delegasi.',
+            backgroundColor: Colors.red.withOpacity(0.1),
+            colorText: Colors.red,
+            snackPosition: SnackPosition.BOTTOM);
       }
     } catch (e) {
       print("Move member delegation error: $e");
@@ -538,7 +571,8 @@ class ProfileController extends GetxController {
     }
   }
 
-  Future<void> moveMultipleMembersDelegation(List<String> targetUserIds, String newDelegationId) async {
+  Future<void> moveMultipleMembersDelegation(
+      List<String> targetUserIds, String newDelegationId) async {
     isLoading.value = true;
     try {
       int successCount = 0;
@@ -548,17 +582,16 @@ class ProfileController extends GetxController {
           successCount++;
         }
       }
-      Get.snackbar(
-        'Batch Update Selesai', 
-        '$successCount dari ${targetUserIds.length} anggota berhasil dipindahkan.', 
-        backgroundColor: Colors.green.withOpacity(0.1), 
-        colorText: Colors.green, 
-        snackPosition: SnackPosition.BOTTOM
-      );
+      Get.snackbar('Batch Update Selesai',
+          '$successCount dari ${targetUserIds.length} anggota berhasil dipindahkan.',
+          backgroundColor: Colors.green.withOpacity(0.1),
+          colorText: Colors.green,
+          snackPosition: SnackPosition.BOTTOM);
       await fetchProfileData(); // reload members list
     } catch (e) {
       print("Move multiple members error: $e");
-      Get.snackbar('Error', 'Terjadi kesalahan saat memproses batch update: $e', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('Error', 'Terjadi kesalahan saat memproses batch update: $e',
+          snackPosition: SnackPosition.BOTTOM);
     } finally {
       isLoading.value = false;
     }
@@ -599,8 +632,10 @@ class ProfileController extends GetxController {
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Hapus Aset Terpilih', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text('Apakah Anda yakin ingin menghapus $count aset yang dipilih? Tindakan ini tidak dapat dibatalkan.',
+        title: const Text('Hapus Aset Terpilih',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(
+            'Apakah Anda yakin ingin menghapus $count aset yang dipilih? Tindakan ini tidak dapat dibatalkan.',
             style: const TextStyle(fontSize: 13, color: Colors.grey)),
         actions: [
           TextButton(
@@ -609,7 +644,9 @@ class ProfileController extends GetxController {
           ),
           TextButton(
             onPressed: () => Get.back(result: true),
-            child: const Text('Hapus Semua', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+            child: const Text('Hapus Semua',
+                style:
+                    TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
           ),
         ],
       ),
@@ -623,8 +660,11 @@ class ProfileController extends GetxController {
         final ok = await apiService.deleteAsset(id);
         if (ok) successCount++;
       }
-      Get.snackbar('Berhasil', '$successCount dari $count aset berhasil dihapus.',
-        backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green, snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+          'Berhasil', '$successCount dari $count aset berhasil dihapus.',
+          backgroundColor: Colors.green.withOpacity(0.1),
+          colorText: Colors.green,
+          snackPosition: SnackPosition.BOTTOM);
       selectedAssetIds.clear();
       isSelectionMode.value = false;
       await fetchAssets();
@@ -644,43 +684,52 @@ class ProfileController extends GetxController {
     if (image == null) return;
 
     final nameController = TextEditingController();
-    final nameResult = await Get.dialog<String>(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(assetType == 'kop' ? 'Beri Nama Kop Surat' : 'Beri Nama TTD Digital', style: const TextStyle(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Masukkan nama/label untuk ${assetType == 'kop' ? "Kop Surat" : "Tanda Tangan"} ini agar dapat dipilih di dropdown.', style: const TextStyle(fontSize: 13, color: Colors.grey)),
-            const SizedBox(height: 16),
-            TextField(
-              controller: nameController,
-              decoration: InputDecoration(
-                hintText: assetType == 'kop' ? 'Kop Utama, Kop Dinas, dll' : 'TTD Kepala, TTD Plt, dll',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+    final nameResult = await Get.dialog<String>(AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text(
+          assetType == 'kop' ? 'Beri Nama Kop Surat' : 'Beri Nama TTD Digital',
+          style: const TextStyle(fontWeight: FontWeight.bold)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+              'Masukkan nama/label untuk ${assetType == 'kop' ? "Kop Surat" : "Tanda Tangan"} ini agar dapat dipilih di dropdown.',
+              style: const TextStyle(fontSize: 13, color: Colors.grey)),
+          const SizedBox(height: 16),
+          TextField(
+            controller: nameController,
+            decoration: InputDecoration(
+              hintText: assetType == 'kop'
+                  ? 'Kop Utama, Kop Dinas, dll'
+                  : 'TTD Kepala, TTD Plt, dll',
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: null),
-            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () {
-              final name = nameController.text.trim();
-              if (name.isNotEmpty) {
-                Get.back(result: name);
-              } else {
-                Get.snackbar('Input Error', 'Nama tidak boleh kosong', backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
-              }
-            },
-            child: const Text('Simpan & Upload', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple)),
           ),
         ],
-      )
-    );
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Get.back(result: null),
+          child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+        ),
+        TextButton(
+          onPressed: () {
+            final name = nameController.text.trim();
+            if (name.isNotEmpty) {
+              Get.back(result: name);
+            } else {
+              Get.snackbar('Input Error', 'Nama tidak boleh kosong',
+                  backgroundColor: Colors.red.withOpacity(0.1),
+                  colorText: Colors.red);
+            }
+          },
+          child: const Text('Simpan & Upload',
+              style:
+                  TextStyle(fontWeight: FontWeight.bold, color: Colors.purple)),
+        ),
+      ],
+    ));
 
     if (nameResult == null || nameResult.isEmpty) return;
 
@@ -690,7 +739,8 @@ class ProfileController extends GetxController {
       final base64Image = base64Encode(bytes);
       final delegId = apiService.delegationId.value ?? '';
 
-      final success = await apiService.uploadAsset(assetType, delegId, base64Image, nameResult);
+      final success = await apiService.uploadAsset(
+          assetType, delegId, base64Image, nameResult);
       if (success) {
         Get.snackbar(
           'Berhasil Diunggah',
@@ -702,7 +752,8 @@ class ProfileController extends GetxController {
         await fetchAssets();
       } else {
         Get.snackbar(
-          'Gagal', 'Upload aset gagal. Silakan coba lagi.',
+          'Gagal',
+          'Upload aset gagal. Silakan coba lagi.',
           backgroundColor: Colors.red.withOpacity(0.1),
           colorText: Colors.red,
           snackPosition: SnackPosition.BOTTOM,
@@ -710,7 +761,9 @@ class ProfileController extends GetxController {
       }
     } catch (e) {
       print("Upload asset error: $e");
-      Get.snackbar('Error', 'Terjadi kesalahan: $e',
+      Get.snackbar(
+        'Error',
+        'Terjadi kesalahan: $e',
         backgroundColor: Colors.red.withOpacity(0.1),
         colorText: Colors.red,
         snackPosition: SnackPosition.BOTTOM,
@@ -721,8 +774,8 @@ class ProfileController extends GetxController {
   }
 
   /// Upload aset (kop/ttd) langsung ke divisi tertentu (dipanggil dari section per divisi).
-  Future<void> pickAndUploadAssetToDelegation(
-      String assetType, String targetDelegationId, String delegationName) async {
+  Future<void> pickAndUploadAssetToDelegation(String assetType,
+      String targetDelegationId, String delegationName) async {
     final XFile? image = await _picker.pickImage(
       source: ImageSource.gallery,
       maxWidth: 1200,
@@ -752,8 +805,11 @@ class ProfileController extends GetxController {
             TextField(
               controller: nameController,
               decoration: InputDecoration(
-                hintText: assetType == 'kop' ? 'Kop Utama, Kop Dinas, dll' : 'TTD Kepala, TTD Plt, dll',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                hintText: assetType == 'kop'
+                    ? 'Kop Utama, Kop Dinas, dll'
+                    : 'TTD Kepala, TTD Plt, dll',
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ],
@@ -770,10 +826,13 @@ class ProfileController extends GetxController {
                 Get.back(result: name);
               } else {
                 Get.snackbar('Input Error', 'Nama tidak boleh kosong',
-                    backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
+                    backgroundColor: Colors.red.withOpacity(0.1),
+                    colorText: Colors.red);
               }
             },
-            child: const Text('Upload', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple)),
+            child: const Text('Upload',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: Colors.purple)),
           ),
         ],
       ),
@@ -785,7 +844,8 @@ class ProfileController extends GetxController {
     try {
       final bytes = await File(image.path).readAsBytes();
       final base64Image = base64Encode(bytes);
-      final success = await apiService.uploadAsset(assetType, targetDelegationId, base64Image, nameResult);
+      final success = await apiService.uploadAsset(
+          assetType, targetDelegationId, base64Image, nameResult);
       if (success) {
         Get.snackbar(
           'Berhasil Diunggah',
@@ -797,7 +857,8 @@ class ProfileController extends GetxController {
         await fetchAssets();
       } else {
         Get.snackbar(
-          'Gagal', 'Upload aset gagal. Silakan coba lagi.',
+          'Gagal',
+          'Upload aset gagal. Silakan coba lagi.',
           backgroundColor: Colors.red.withOpacity(0.1),
           colorText: Colors.red,
           snackPosition: SnackPosition.BOTTOM,
@@ -805,7 +866,9 @@ class ProfileController extends GetxController {
       }
     } catch (e) {
       print("Upload asset to delegation error: $e");
-      Get.snackbar('Error', 'Terjadi kesalahan: $e',
+      Get.snackbar(
+        'Error',
+        'Terjadi kesalahan: $e',
         backgroundColor: Colors.red.withOpacity(0.1),
         colorText: Colors.red,
         snackPosition: SnackPosition.BOTTOM,
@@ -828,8 +891,11 @@ class ProfileController extends GetxController {
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Hapus Aset', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text('Apakah Anda yakin ingin menghapus aset "$assetName"? Tindakan ini tidak dapat dibatalkan.', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+        title: const Text('Hapus Aset',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(
+            'Apakah Anda yakin ingin menghapus aset "$assetName"? Tindakan ini tidak dapat dibatalkan.',
+            style: const TextStyle(fontSize: 13, color: Colors.grey)),
         actions: [
           TextButton(
             onPressed: () => Get.back(result: false),
@@ -837,7 +903,9 @@ class ProfileController extends GetxController {
           ),
           TextButton(
             onPressed: () => Get.back(result: true),
-            child: const Text('Hapus', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+            child: const Text('Hapus',
+                style:
+                    TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
           ),
         ],
       ),
@@ -849,11 +917,15 @@ class ProfileController extends GetxController {
       final success = await apiService.deleteAsset(assetId);
       if (success) {
         Get.snackbar('Berhasil', 'Aset "$assetName" telah dihapus.',
-          backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green, snackPosition: SnackPosition.BOTTOM);
+            backgroundColor: Colors.green.withOpacity(0.1),
+            colorText: Colors.green,
+            snackPosition: SnackPosition.BOTTOM);
         await fetchAssets();
       } else {
         Get.snackbar('Gagal', 'Gagal menghapus aset.',
-          backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red, snackPosition: SnackPosition.BOTTOM);
+            backgroundColor: Colors.red.withOpacity(0.1),
+            colorText: Colors.red,
+            snackPosition: SnackPosition.BOTTOM);
       }
     } catch (e) {
       print("Delete asset error: $e");
@@ -867,7 +939,8 @@ class ProfileController extends GetxController {
     final newName = await Get.dialog<String>(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Ubah Nama Aset', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Ubah Nama Aset',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         content: TextField(
           controller: nameController,
           decoration: InputDecoration(
@@ -887,7 +960,9 @@ class ProfileController extends GetxController {
                 Get.back(result: name);
               }
             },
-            child: const Text('Simpan', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple)),
+            child: const Text('Simpan',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: Colors.purple)),
           ),
         ],
       ),
@@ -899,11 +974,15 @@ class ProfileController extends GetxController {
       final success = await apiService.updateAsset(assetId, name: newName);
       if (success) {
         Get.snackbar('Berhasil', 'Nama aset diperbarui menjadi "$newName".',
-          backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green, snackPosition: SnackPosition.BOTTOM);
+            backgroundColor: Colors.green.withOpacity(0.1),
+            colorText: Colors.green,
+            snackPosition: SnackPosition.BOTTOM);
         await fetchAssets();
       } else {
         Get.snackbar('Gagal', 'Gagal memperbarui nama aset.',
-          backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red, snackPosition: SnackPosition.BOTTOM);
+            backgroundColor: Colors.red.withOpacity(0.1),
+            colorText: Colors.red,
+            snackPosition: SnackPosition.BOTTOM);
       }
     } catch (e) {
       print("Update asset error: $e");
@@ -924,14 +1003,20 @@ class ProfileController extends GetxController {
     try {
       final bytes = await File(image.path).readAsBytes();
       final base64Image = base64Encode(bytes);
-      final success = await apiService.updateAsset(assetId, base64Image: base64Image);
+      final success =
+          await apiService.updateAsset(assetId, base64Image: base64Image);
       if (success) {
-        Get.snackbar('Berhasil', 'Gambar aset "$assetName" berhasil diperbarui.',
-          backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green, snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar(
+            'Berhasil', 'Gambar aset "$assetName" berhasil diperbarui.',
+            backgroundColor: Colors.green.withOpacity(0.1),
+            colorText: Colors.green,
+            snackPosition: SnackPosition.BOTTOM);
         await fetchAssets();
       } else {
         Get.snackbar('Gagal', 'Gagal memperbarui gambar aset.',
-          backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red, snackPosition: SnackPosition.BOTTOM);
+            backgroundColor: Colors.red.withOpacity(0.1),
+            colorText: Colors.red,
+            snackPosition: SnackPosition.BOTTOM);
       }
     } catch (e) {
       print("Update asset image error: $e");
@@ -940,28 +1025,25 @@ class ProfileController extends GetxController {
     }
   }
 
-  Future<void> toggleAssetActivation(String assetId, String name, bool currentActive) async {
+  Future<void> toggleAssetActivation(
+      String assetId, String name, bool currentActive) async {
     isLoading.value = true;
     try {
       final newStatus = !currentActive;
-      final success = await apiService.updateAsset(assetId, isActive: newStatus);
+      final success =
+          await apiService.updateAsset(assetId, isActive: newStatus);
       if (success) {
-        Get.snackbar(
-          'Berhasil', 
-          'Aset "$name" berhasil ${newStatus ? "diaktifkan" : "dinonaktifkan"}.',
-          backgroundColor: Colors.green.withOpacity(0.1), 
-          colorText: Colors.green, 
-          snackPosition: SnackPosition.BOTTOM
-        );
+        Get.snackbar('Berhasil',
+            'Aset "$name" berhasil ${newStatus ? "diaktifkan" : "dinonaktifkan"}.',
+            backgroundColor: Colors.green.withOpacity(0.1),
+            colorText: Colors.green,
+            snackPosition: SnackPosition.BOTTOM);
         await fetchAssets();
       } else {
-        Get.snackbar(
-          'Gagal', 
-          'Gagal mengubah status aktif aset.',
-          backgroundColor: Colors.red.withOpacity(0.1), 
-          colorText: Colors.red, 
-          snackPosition: SnackPosition.BOTTOM
-        );
+        Get.snackbar('Gagal', 'Gagal mengubah status aktif aset.',
+            backgroundColor: Colors.red.withOpacity(0.1),
+            colorText: Colors.red,
+            snackPosition: SnackPosition.BOTTOM);
       }
     } catch (e) {
       print("Toggle asset activation error: $e");

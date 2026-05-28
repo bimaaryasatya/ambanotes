@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../data/services/api_service.dart';
@@ -12,13 +14,16 @@ class AssignmentFormController extends GetxController {
 
   final selectedDate = Rx<DateTime?>(null);
   final selectedTime = Rx<TimeOfDay?>(null);
-  
+
   final selectedKopSurat = ''.obs;
   final selectedTtd = ''.obs;
   final sourceDocumentTitle = 'Undangan'.obs;
   final isLoading = false.obs;
   final isAssetsMissing = false.obs;
-  
+  final isDetectingCurrentLocation = false.obs;
+  final currentLocationLabel = ''.obs;
+  final isCurrentLocationDenied = false.obs;
+
   String docId = 'unknown';
   String? docDelegationId;
 
@@ -33,17 +38,21 @@ class AssignmentFormController extends GetxController {
       docId = args['doc_id'] ?? 'unknown';
       letterNumberController.text = args['nomor_surat'] ?? '';
       locationController.text = args['organisasi'] ?? '';
-      sourceDocumentTitle.value = args['title'] ?? args['perihal'] ?? 'Undangan';
+      sourceDocumentTitle.value =
+          args['title'] ?? args['perihal'] ?? 'Undangan';
       docDelegationId = args['delegation_id'];
     }
     loadAssets();
+    detectCurrentLocationForPdf();
   }
 
   Future<void> loadAssets() async {
     try {
       final List<dynamic> assets;
       if (apiService.isOwner) {
-        if (docDelegationId != null && docDelegationId!.isNotEmpty && docDelegationId != 'general') {
+        if (docDelegationId != null &&
+            docDelegationId!.isNotEmpty &&
+            docDelegationId != 'general') {
           assets = await apiService.getAssetsByDelegation(docDelegationId!);
         } else {
           assets = await apiService.getAssets();
@@ -119,13 +128,93 @@ class AssignmentFormController extends GetxController {
     }
   }
 
-  String get formattedDate => selectedDate.value != null 
-    ? DateFormat('dd MMMM yyyy').format(selectedDate.value!) 
-    : 'Pilih Tanggal';
+  String get formattedDate => selectedDate.value != null
+      ? DateFormat('dd MMMM yyyy').format(selectedDate.value!)
+      : 'Pilih Tanggal';
 
-  String get formattedTime => selectedTime.value != null 
-    ? '${selectedTime.value!.hour.toString().padLeft(2, '0')}:${selectedTime.value!.minute.toString().padLeft(2, '0')} WIB' 
-    : 'Pilih Waktu';
+  String get formattedTime => selectedTime.value != null
+      ? '${selectedTime.value!.hour.toString().padLeft(2, '0')}:${selectedTime.value!.minute.toString().padLeft(2, '0')} WIB'
+      : 'Pilih Waktu';
+
+  Future<void> detectCurrentLocationForPdf() async {
+    if (isDetectingCurrentLocation.value) return;
+
+    isDetectingCurrentLocation.value = true;
+    isCurrentLocationDenied.value = false;
+
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        currentLocationLabel.value = '';
+        return;
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        currentLocationLabel.value = '';
+        isCurrentLocationDenied.value = true;
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+        ),
+      );
+
+      final resolvedLocation = await _resolveCurrentLocation(position);
+      if (resolvedLocation.isNotEmpty) {
+        currentLocationLabel.value = 'Lokasi saat ini: $resolvedLocation';
+      } else {
+        currentLocationLabel.value =
+            'Lokasi saat ini: ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
+      }
+    } catch (e) {
+      debugPrint('Detect current location error: $e');
+      currentLocationLabel.value = '';
+    } finally {
+      isDetectingCurrentLocation.value = false;
+    }
+  }
+
+  Future<String> _resolveCurrentLocation(Position position) async {
+    try {
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+      if (placemarks.isEmpty) return '';
+
+      final placemark = placemarks.first;
+      final orderedParts = <String>[
+        if ((placemark.subLocality ?? '').trim().isNotEmpty)
+          placemark.subLocality!.trim(),
+        if ((placemark.locality ?? '').trim().isNotEmpty)
+          placemark.locality!.trim(),
+        if ((placemark.subAdministrativeArea ?? '').trim().isNotEmpty)
+          placemark.subAdministrativeArea!.trim(),
+        if ((placemark.administrativeArea ?? '').trim().isNotEmpty)
+          placemark.administrativeArea!.trim(),
+      ];
+
+      final uniqueParts = <String>[];
+      for (final part in orderedParts) {
+        if (!uniqueParts.contains(part)) {
+          uniqueParts.add(part);
+        }
+      }
+
+      return uniqueParts.join(', ');
+    } catch (e) {
+      debugPrint('Reverse geocoding error: $e');
+      return '';
+    }
+  }
 
   void submitForm() async {
     FocusManager.instance.primaryFocus?.unfocus();
@@ -141,7 +230,9 @@ class AssignmentFormController extends GetxController {
     }
     if (formKey.currentState!.validate()) {
       if (selectedDate.value == null || selectedTime.value == null) {
-        Get.snackbar('Error', 'Silakan pilih tanggal dan waktu', backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
+        Get.snackbar('Error', 'Silakan pilih tanggal dan waktu',
+            backgroundColor: Colors.red.withOpacity(0.1),
+            colorText: Colors.red);
         return;
       }
 
@@ -149,7 +240,7 @@ class AssignmentFormController extends GetxController {
       final timeStr = formattedTime;
       final location = locationController.text;
       final letterNo = letterNumberController.text;
-      
+
       final kop = selectedKopSurat.value;
       final ttd = selectedTtd.value;
 
@@ -160,6 +251,7 @@ class AssignmentFormController extends GetxController {
         date: dateStr,
         time: timeStr,
         location: location,
+        currentLocationLabel: currentLocationLabel.value,
         kop: kop,
         ttd: ttd,
       );
@@ -187,13 +279,10 @@ class AssignmentFormController extends GetxController {
           );
         }
       } else {
-        Get.snackbar(
-          'Error', 
-          'Gagal mendaftarkan surat tugas ke server.', 
-          backgroundColor: Colors.red.withOpacity(0.1), 
-          colorText: Colors.red,
-          snackPosition: SnackPosition.BOTTOM
-        );
+        Get.snackbar('Error', 'Gagal mendaftarkan surat tugas ke server.',
+            backgroundColor: Colors.red.withOpacity(0.1),
+            colorText: Colors.red,
+            snackPosition: SnackPosition.BOTTOM);
       }
     }
   }
