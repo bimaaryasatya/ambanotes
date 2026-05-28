@@ -12,9 +12,11 @@ class ApiService extends GetxService {
   final email = RxnString();
   final role = RxnString();
   final orgId = RxnString();
+  final orgName = RxnString();
   final delegationId = RxnString();
   final delegationName = RxnString();
   final inviteCode = RxnString();
+  final profileImageData = RxnString();
   final googleDriveConnected = false.obs;
 
   bool get isAuthenticated => token.value != null;
@@ -147,9 +149,11 @@ class ApiService extends GetxService {
         email.value = body['email'];
         role.value = body['role'];
         orgId.value = body['org_id'];
+        orgName.value = body['org_name'];
         delegationId.value = body['delegation_id'];
         delegationName.value = body['delegation_name'] ?? 'General';
         inviteCode.value = body['invite_code'];
+        profileImageData.value = body['profile_image_data'];
         googleDriveConnected.value = body['google_drive_connected'] == true;
       }
     } catch (e) {
@@ -750,6 +754,30 @@ class ApiService extends GetxService {
     return null;
   }
 
+  Future<Map<String, dynamic>?> updateProfile({
+    String? usernameInput,
+    String? orgNameInput,
+    String? profileImageBase64,
+  }) async {
+    try {
+      final payload = <String, dynamic>{};
+      if (usernameInput != null) payload['username'] = usernameInput;
+      if (orgNameInput != null) payload['org_name'] = orgNameInput;
+      if (profileImageBase64 != null) {
+        payload['profile_image_data'] = profileImageBase64;
+      }
+
+      final response = await _put('/auth/profile', payload);
+      if (response.statusCode == 200 && response.body != null) {
+        await getProfile();
+        return Map<String, dynamic>.from(response.body as Map);
+      }
+    } catch (e) {
+      print("Update profile error: $e");
+    }
+    return null;
+  }
+
   Future<bool> deleteChatHistory(String docId) async {
     try {
       final response = await _delete('/ai/chat/$docId');
@@ -939,8 +967,11 @@ class ApiService extends GetxService {
     email.value = null;
     role.value = null;
     orgId.value = null;
+    orgName.value = null;
     delegationId.value = null;
     delegationName.value = null;
+    inviteCode.value = null;
+    profileImageData.value = null;
     googleDriveConnected.value = false;
   }
 }

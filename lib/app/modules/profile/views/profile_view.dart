@@ -1,4 +1,5 @@
 import 'package:ambanotes/app/theme/app_theme.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -55,6 +56,19 @@ class ProfileView extends GetView<ProfileController> {
   }
 
   Widget _buildHeaderCard() {
+    ImageProvider? avatarImage;
+    final rawImage = controller.profileImageData.value.trim();
+    if (rawImage.isNotEmpty) {
+      try {
+        final clean = rawImage.contains(',')
+            ? rawImage.split(',').last
+            : rawImage;
+        avatarImage = MemoryImage(base64Decode(clean));
+      } catch (_) {
+        avatarImage = null;
+      }
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -71,28 +85,64 @@ class ProfileView extends GetView<ProfileController> {
           ]),
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                  color: AppTheme.primary.withOpacity(0.2), width: 2),
-            ),
-            child: const CircleAvatar(
-              radius: 40,
-              backgroundImage: NetworkImage(
-                  'https://lh3.googleusercontent.com/aida-public/AB6AXuDmU6mMwiX67PUwAXsSeel6gR6OcCaGid7ocK9MoDsDXFStorjDCsvKbQHT2Vm0fUGtCM1YVhoEhJMe5kNYPOIAbfhqNP28Wp6EGhevy3WIPRrObwRIAeRUnLZIJQ7rwkO133r4qEX6HRgzf5ZBocAlxCoHhPtJVLpMvUSQfGFQ95yNwh9RlBu37TYcaHmWzW74vVSV3crHQnydSGuM288kkNwQMBTzMthQBsYMEqFFe6pDYB6k0nnrHLmNZ1ygQmD4j0kggcdubE8z'),
-            ),
+          Stack(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: AppTheme.primary.withOpacity(0.2), width: 2),
+                ),
+                child: CircleAvatar(
+                  radius: 40,
+                  backgroundColor: AppTheme.primary.withOpacity(0.1),
+                  backgroundImage: avatarImage,
+                  child: avatarImage == null
+                      ? Text(
+                          controller.fullName.value.isEmpty
+                              ? '?'
+                              : controller.fullName.value[0].toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primary,
+                          ),
+                        )
+                      : null,
+                ),
+              ),
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: InkWell(
+                  onTap: controller.pickAndUpdateProfilePhoto,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: AppTheme.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      LucideIcons.camera,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           Text(
-            controller.username.value.toUpperCase(),
+            controller.fullName.value,
             style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.onSurface),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
             controller.email.value,
             style: const TextStyle(fontSize: 13, color: AppTheme.outline),
@@ -110,15 +160,42 @@ class ProfileView extends GetView<ProfileController> {
                 const Icon(LucideIcons.building2,
                     size: 14, color: AppTheme.primary),
                 const SizedBox(width: 8),
-                Text(
-                  controller.orgName.value.toUpperCase(),
-                  style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primary,
-                      letterSpacing: 0.5),
+                Flexible(
+                  child: ClipRect(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: Text(
+                        controller.orgName.value.toUpperCase(),
+                        maxLines: 1,
+                        softWrap: false,
+                        style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primary,
+                            letterSpacing: 0.5),
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 8),
+                if (controller.apiService.isOwner)
+                  GestureDetector(
+                    onTap: () => _showEditOrgNameDialog(Get.context!),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        LucideIcons.pencil,
+                        size: 12,
+                        color: AppTheme.primary,
+                      ),
+                    ),
+                  ),
+                if (controller.apiService.isOwner) const SizedBox(width: 8),
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -473,6 +550,42 @@ class ProfileView extends GetView<ProfileController> {
           onChanged: controller.themeService.toggleTheme,
         ),
       ],
+    );
+  }
+
+  void _showEditOrgNameDialog(BuildContext context) {
+    final textController =
+        TextEditingController(text: controller.orgName.value);
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Edit Nama Organisasi',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: TextField(
+          controller: textController,
+          decoration: const InputDecoration(
+            labelText: 'Nama organisasi',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final nextName = textController.text.trim();
+              if (nextName.isEmpty) return;
+              Get.back();
+              await controller.updateOrganizationName(nextName);
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
     );
   }
 }

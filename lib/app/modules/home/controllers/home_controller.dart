@@ -22,6 +22,9 @@ class HomeController extends GetxController {
   final isUploading = false.obs;
   final isLoadingNotifications = false.obs;
 
+  List<Document> get processingDocuments =>
+      documents.where((doc) => doc.status.toLowerCase() == 'processing').toList();
+
   @override
   void onInit() {
     super.onInit();

@@ -46,6 +46,8 @@ class HomeView extends GetView<HomeController> {
             _buildSearchBar(),
             const SizedBox(height: 24),
             _buildQuickActions(),
+            const SizedBox(height: 20),
+            _buildProcessingSection(context),
             const SizedBox(height: 32),
             _buildAgendaHeader(context),
             const SizedBox(height: 16),
@@ -171,6 +173,153 @@ class HomeView extends GetView<HomeController> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildProcessingSection(BuildContext context) {
+    return Obx(() {
+      final processingDocs = controller.processingDocuments;
+      if (processingDocs.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppTheme.primary.withOpacity(0.08),
+              AppTheme.aiAccent.withOpacity(0.07),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppTheme.primary.withOpacity(0.15)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.4,
+                      color: AppTheme.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Dokumen sedang diproses',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.onSurface,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${processingDocs.length} dokumen sedang dianalisis oleh OCR dan AI.',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            ...processingDocs.take(3).map(_buildProcessingItem),
+            if (processingDocs.length > 3) ...[
+              const SizedBox(height: 6),
+              Text(
+                '+${processingDocs.length - 3} dokumen lain masih berjalan',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primary,
+                ),
+              ),
+            ],
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.tonalIcon(
+                onPressed: () => Get.offAllNamed(Routes.ARCHIVE),
+                icon: const Icon(LucideIcons.archive, size: 16),
+                label: const Text('Lihat di Files'),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildProcessingItem(Document doc) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.82),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.primary.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(LucideIcons.fileClock, size: 16, color: AppTheme.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  doc.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.onSurface,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'OCR, klasifikasi, dan ekstraksi isi sedang berjalan di server.',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppTheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: const LinearProgressIndicator(
+              minHeight: 6,
+              color: AppTheme.primary,
+              backgroundColor: Color(0xFFD9E7E2),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

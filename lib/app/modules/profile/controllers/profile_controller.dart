@@ -19,8 +19,10 @@ class ProfileController extends GetxController {
   final username = ''.obs;
   final email = ''.obs;
   final role = ''.obs;
+  final fullName = ''.obs;
   final orgName = ''.obs;
   final inviteCode = ''.obs;
+  final profileImageData = ''.obs;
 
   // Google Drive state
   final isDriveConnected = false.obs;
@@ -48,10 +50,12 @@ class ProfileController extends GetxController {
       // 1. Load User Profile (which directly populates ApiService properties)
       await apiService.getProfile();
       username.value = apiService.username.value ?? '';
+      fullName.value = apiService.username.value ?? '';
       email.value = apiService.email.value ?? '';
       role.value = apiService.role.value ?? '';
-      orgName.value = apiService.delegationName.value ?? 'Personal Workspace';
+      orgName.value = apiService.orgName.value ?? 'Personal Workspace';
       inviteCode.value = apiService.inviteCode.value ?? '';
+      profileImageData.value = apiService.profileImageData.value ?? '';
 
       // 2. Load Google Drive Status from ApiService observable
       isDriveConnected.value = apiService.googleDriveConnected.value;
@@ -265,6 +269,80 @@ class ProfileController extends GetxController {
       }
     } catch (e) {
       print("Delete account error: $e");
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  final _picker = ImagePicker();
+
+  Future<void> pickAndUpdateProfilePhoto() async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 1200,
+    );
+    if (image == null) return;
+
+    isLoading.value = true;
+    try {
+      final bytes = await File(image.path).readAsBytes();
+      final base64Image = base64Encode(bytes);
+      final result = await apiService.updateProfile(
+        profileImageBase64: base64Image,
+      );
+      if (result != null) {
+        profileImageData.value = base64Image;
+        Get.snackbar(
+          'Foto Profil Diperbarui',
+          'Foto profil berhasil diperbarui.',
+          backgroundColor: Colors.green.withOpacity(0.1),
+          colorText: Colors.green,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      } else {
+        Get.snackbar(
+          'Gagal',
+          'Foto profil gagal diperbarui.',
+          backgroundColor: Colors.red.withOpacity(0.1),
+          colorText: Colors.red,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } catch (e) {
+      print("Update profile photo error: $e");
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> updateOrganizationName(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+
+    isLoading.value = true;
+    try {
+      final result = await apiService.updateProfile(orgNameInput: trimmed);
+      if (result != null) {
+        orgName.value = apiService.orgName.value ?? trimmed;
+        Get.snackbar(
+          'Organisasi Diperbarui',
+          'Nama organisasi berhasil diperbarui.',
+          backgroundColor: Colors.green.withOpacity(0.1),
+          colorText: Colors.green,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      } else {
+        Get.snackbar(
+          'Gagal',
+          'Nama organisasi gagal diperbarui.',
+          backgroundColor: Colors.red.withOpacity(0.1),
+          colorText: Colors.red,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } catch (e) {
+      print("Update organization name error: $e");
     } finally {
       isLoading.value = false;
     }
@@ -488,7 +566,6 @@ class ProfileController extends GetxController {
 
   // --- Asset Management (Kop Surat & TTD Digital) ---
   final isUploadingAsset = false.obs;
-  final _picker = ImagePicker();
 
   // Batch selection
   final isSelectionMode = false.obs;

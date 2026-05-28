@@ -215,6 +215,10 @@ class ArchiveView extends GetView<ArchiveController> {
     final isSelected = controller.selectedDocIds.contains(doc.id);
     final showSelectionUi = controller.isSelectionMode.value && !isProcessing;
 
+    if (isProcessing) {
+      return _buildProcessingDocumentItem(doc);
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -544,6 +548,156 @@ class ArchiveView extends GetView<ArchiveController> {
           fontSize: 9,
           fontWeight: FontWeight.bold,
           color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProcessingDocumentItem(Document doc) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.primary.withOpacity(0.08),
+            AppTheme.aiAccent.withOpacity(0.06),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.primary.withOpacity(0.18)),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primary.withOpacity(0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Get.snackbar(
+              'Dokumen Sedang Diproses',
+              'OCR, klasifikasi, dan ringkasan AI masih berjalan. Dokumen akan otomatis muncul normal setelah selesai.',
+              snackPosition: SnackPosition.BOTTOM,
+            );
+          },
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.78),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: AppTheme.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            doc.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Sedang diproses oleh pipeline AI',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _buildStatusBadge(doc.status),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.72),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.primary.withOpacity(0.08)),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(LucideIcons.sparkles, size: 14, color: AppTheme.aiAccent),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Dokumen baru sudah diterima server. Sistem sedang menjalankan OCR, klasifikasi, ekstraksi entitas, dan penyusunan ringkasan.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            height: 1.45,
+                            color: AppTheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: const LinearProgressIndicator(
+                    minHeight: 7,
+                    color: AppTheme.primary,
+                    backgroundColor: Color(0xFFD7E4DF),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Icon(LucideIcons.clock3, size: 14, color: AppTheme.outline),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        doc.archivedDate,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.outline,
+                        ),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () => controller.fetchDocuments(),
+                      icon: const Icon(LucideIcons.refreshCw, size: 14),
+                      label: const Text('Refresh'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
