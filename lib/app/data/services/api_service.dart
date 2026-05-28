@@ -163,30 +163,6 @@ class ApiService extends GetxService {
     }
   }
 
-  Future<bool> updateProfile(
-      {String? username, String? profileImageData}) async {
-    try {
-      final body = <String, dynamic>{};
-      if (username != null) body['username'] = username;
-      if (profileImageData != null) body['profile_image'] = profileImageData;
-
-      final response = await _put('/auth/profile', body);
-      if (response.statusCode == 200) {
-        await getProfile();
-        return true;
-      }
-
-      final errMsg = response.body?['error'] ?? 'Gagal memperbarui profil.';
-      Get.snackbar('Gagal Memperbarui', errMsg,
-          snackPosition: SnackPosition.BOTTOM);
-      return false;
-    } catch (e) {
-      Get.snackbar('Kesalahan Jaringan', 'Gagal menghubungi server: $e',
-          snackPosition: SnackPosition.BOTTOM);
-      return false;
-    }
-  }
-
   Future<bool> updateOrganizationName(String name) async {
     try {
       final response = await _put('/auth/organization', {'name': name});
