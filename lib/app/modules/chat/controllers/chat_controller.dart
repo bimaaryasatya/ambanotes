@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../../../data/services/api_service.dart';
 
 class ChatMessage {
@@ -90,6 +91,10 @@ class ChatController extends GetxController {
 
   final FlutterTts flutterTts = FlutterTts();
   final speakingMsgId = ''.obs;
+  final stt.SpeechToText speechToText = stt.SpeechToText();
+  final isListening = false.obs;
+  final speechEnabled = false.obs;
+  final messageController = TextEditingController();
 
   @override
   void onInit() {
@@ -97,6 +102,7 @@ class ChatController extends GetxController {
     loadSessionsFromStorage();
     _checkArguments();
     _initTts();
+    _initSpeechToText();
     fetchChatHistoriesFromBackend();
   }
 
@@ -111,6 +117,24 @@ class ChatController extends GetxController {
       });
     } catch (e) {
       print("TTS init error: $e");
+    }
+  }
+
+  Future<void> _initSpeechToText() async {
+    try {
+      speechEnabled.value = await speechToText.initialize(
+        onStatus: (status) {
+          if (status == 'done' || status == 'notListening') {
+            isListening.value = false;
+          }
+        },
+        onError: (_) {
+          isListening.value = false;
+        },
+      );
+    } catch (e) {
+      speechEnabled.value = false;
+      print("Speech init error: $e");
     }
   }
 
@@ -149,6 +173,8 @@ class ChatController extends GetxController {
   @override
   void onClose() {
     flutterTts.stop();
+    speechToText.stop();
+    messageController.dispose();
     super.onClose();
   }
 
@@ -285,10 +311,14 @@ class ChatController extends GetxController {
     }
   }
 
-  void deleteSession(ChatSession session) {
+  Future<void> deleteSession(ChatSession session) async {
+    if (session.docId != null) {
+      await apiService.deleteChatHistory(session.docId!);
+    }
+
     sessions.remove(session);
     saveSessionsToStorage();
-    
+
     if (currentSession.value?.id == session.id) {
       if (sessions.isNotEmpty) {
         selectSession(sessions.first);
@@ -375,10 +405,47 @@ class ChatController extends GetxController {
       }
       saveSessionsToStorage();
       sessions.refresh();
+      messageController.clear();
     } catch (e) {
       isTyping.value = false;
       print("Chat error: $e");
     }
+  }
+
+  Future<void> toggleListening() async {
+    if (!speechEnabled.value) {
+      await _initSpeechToText();
+    }
+
+    if (!speechEnabled.value) {
+      Get.snackbar(
+        "Mikrofon Tidak Tersedia",
+        "Speech to text belum bisa digunakan pada perangkat ini.",
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    if (isListening.value) {
+      await speechToText.stop();
+      isListening.value = false;
+      return;
+    }
+
+    isListening.value = true;
+    await speechToText.listen(
+      localeId: 'id_ID',
+      listenMode: stt.ListenMode.confirmation,
+      onResult: (result) {
+        messageController.text = result.recognizedWords;
+        messageController.selection = TextSelection.fromPosition(
+          TextPosition(offset: messageController.text.length),
+        );
+        if (result.finalResult) {
+          isListening.value = false;
+        }
+      },
+    );
   }
 
   final isLoadingHistory = false.obs;

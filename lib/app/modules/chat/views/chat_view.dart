@@ -15,10 +15,9 @@ class ChatView extends GetView<ChatController> {
 
   @override
   Widget build(BuildContext context) {
-    final textController = TextEditingController();
-
+    final scaffoldColor = Theme.of(context).scaffoldBackgroundColor;
     return Scaffold(
-      backgroundColor: AppTheme.surface,
+      backgroundColor: scaffoldColor,
       bottomNavigationBar: const CustomBottomNavBar(currentIndex: 3),
       appBar: AppBar(
         title: const Text("Ask AmbaAI"),
@@ -123,7 +122,7 @@ class ChatView extends GetView<ChatController> {
             left: 0,
             right: 0,
             bottom: -controller.inputOffset.value,
-            child: _buildChatInput(textController),
+            child: _buildChatInput(),
           )),
         ],
       ),
@@ -588,7 +587,7 @@ class ChatView extends GetView<ChatController> {
     );
   }
 
-  Widget _buildChatInput(TextEditingController textController) {
+  Widget _buildChatInput() {
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -606,7 +605,7 @@ class ChatView extends GetView<ChatController> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildSuggestionChips(textController),
+              _buildSuggestionChips(),
               const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -627,15 +626,9 @@ class ChatView extends GetView<ChatController> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      IconButton(
-                        icon: const Icon(LucideIcons.paperclip, color: AppTheme.secondary, size: 20),
-                        constraints: const BoxConstraints(),
-                        padding: const EdgeInsets.all(10),
-                        onPressed: () {},
-                      ),
                       Expanded(
                         child: TextField(
-                          controller: textController,
+                          controller: controller.messageController,
                           decoration: const InputDecoration(
                             hintText: "Tanyakan apa saja ke AmbaAI...",
                             border: InputBorder.none,
@@ -645,6 +638,22 @@ class ChatView extends GetView<ChatController> {
                           maxLines: 5,
                           minLines: 1,
                           style: const TextStyle(fontSize: 14),
+                        ),
+                      ),
+                      Obx(
+                        () => IconButton(
+                          constraints: const BoxConstraints(),
+                          padding: const EdgeInsets.all(8),
+                          icon: Icon(
+                            controller.isListening.value
+                                ? LucideIcons.micOff
+                                : LucideIcons.mic,
+                            color: controller.isListening.value
+                                ? Colors.red
+                                : AppTheme.secondary,
+                            size: 20,
+                          ),
+                          onPressed: controller.toggleListening,
                         ),
                       ),
                       IconButton(
@@ -659,8 +668,7 @@ class ChatView extends GetView<ChatController> {
                           child: const Icon(LucideIcons.send, color: Colors.white, size: 16),
                         ),
                         onPressed: () {
-                          controller.sendMessage(textController.text);
-                          textController.clear();
+                          controller.sendMessage(controller.messageController.text);
                         },
                       ),
                     ],
@@ -674,7 +682,7 @@ class ChatView extends GetView<ChatController> {
     );
   }
 
-  Widget _buildSuggestionChips(TextEditingController textController) {
+  Widget _buildSuggestionChips() {
     final chips = [
       {'label': 'Cari undangan masuk', 'icon': LucideIcons.search},
       {'label': 'Apakah ada kontrak yang habis?', 'icon': LucideIcons.clock},

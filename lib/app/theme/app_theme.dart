@@ -92,4 +92,59 @@ class AppTheme {
       ),
     ),
   );
+
+  static final ThemeData dark = ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.dark,
+    colorScheme: ColorScheme.fromSeed(
+      brightness: Brightness.dark,
+      seedColor: AppColors.primaryContainer,
+      primary: const Color(0xFF8ADBC6),
+      onPrimary: const Color(0xFF062C25),
+      primaryContainer: const Color(0xFF0D3A31),
+      onPrimaryContainer: const Color(0xFFB8F3E4),
+      secondary: const Color(0xFFB7C8D3),
+      onSecondary: const Color(0xFF1D2A32),
+      secondaryContainer: const Color(0xFF27343D),
+      onSecondaryContainer: const Color(0xFFD4E4EE),
+      surface: const Color(0xFF0E1517),
+      onSurface: const Color(0xFFF1F5F4),
+      outline: const Color(0xFF8C9894),
+      outlineVariant: const Color(0xFF35413E),
+    ),
+    scaffoldBackgroundColor: const Color(0xFF0E1517),
+    cardColor: const Color(0xFF152023),
+    textTheme: GoogleFonts.interTextTheme(
+      ThemeData.dark().textTheme,
+    ).copyWith(
+      displayLarge: GoogleFonts.publicSans(
+        fontWeight: FontWeight.bold,
+        color: const Color(0xFFF1F5F4),
+      ),
+      displayMedium: GoogleFonts.publicSans(
+        fontWeight: FontWeight.bold,
+        color: const Color(0xFFF1F5F4),
+      ),
+      displaySmall: GoogleFonts.publicSans(
+        fontWeight: FontWeight.bold,
+        color: const Color(0xFFF1F5F4),
+      ),
+      headlineMedium: GoogleFonts.publicSans(
+        fontWeight: FontWeight.bold,
+        color: const Color(0xFF8ADBC6),
+      ),
+    ),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Color(0xFF0E1517),
+      foregroundColor: Color(0xFF8ADBC6),
+      elevation: 0,
+      centerTitle: true,
+      titleTextStyle: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        color: Color(0xFF8ADBC6),
+      ),
+    ),
+    dividerColor: const Color(0xFF35413E),
+  );
 }

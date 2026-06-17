@@ -33,19 +33,21 @@ class CustomBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.8),
+        color: (isDark ? const Color(0xFF152023) : Colors.white).withOpacity(0.88),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         border: Border(
           top: BorderSide(
-            color: AppTheme.outlineVariant.withOpacity(0.3),
+            color: (isDark ? const Color(0xFF35413E) : AppTheme.outlineVariant)
+                .withOpacity(0.45),
             width: 1,
           ),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(isDark ? 0.22 : 0.05),
             blurRadius: 12,
             offset: const Offset(0, -4),
           )
@@ -77,6 +79,7 @@ class CustomBottomNavBar extends StatelessWidget {
 
   Widget _buildNavItem({required IconData icon, required String label, required int index}) {
     final isSelected = currentIndex == index;
+    final isDark = Get.isDarkMode;
     
     return GestureDetector(
       onTap: () => _onItemTapped(index),
@@ -87,7 +90,9 @@ class CustomBottomNavBar extends StatelessWidget {
           Icon(
             icon,
             size: 24,
-            color: isSelected ? AppTheme.primary : AppTheme.onSurfaceVariant,
+            color: isSelected
+                ? AppTheme.primary
+                : (isDark ? const Color(0xFFB7C8D3) : AppTheme.onSurfaceVariant),
           ),
           const SizedBox(height: 4),
           Text(
@@ -95,7 +100,9 @@ class CustomBottomNavBar extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: isSelected ? AppTheme.primary : AppTheme.onSurfaceVariant,
+              color: isSelected
+                  ? AppTheme.primary
+                  : (isDark ? const Color(0xFFB7C8D3) : AppTheme.onSurfaceVariant),
             ),
           ),
         ],

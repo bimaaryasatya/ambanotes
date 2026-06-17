@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 
 class ApiService extends GetxService {
   // Using local computer IP address so both Android Emulator AND physical phones can access it
@@ -11,9 +12,12 @@ class ApiService extends GetxService {
   final email = RxnString();
   final role = RxnString();
   final orgId = RxnString();
+  final orgName = RxnString();
   final delegationId = RxnString();
   final delegationName = RxnString();
+  final organizationName = RxnString();
   final inviteCode = RxnString();
+  final profileImageData = RxnString();
   final googleDriveConnected = false.obs;
 
   bool get isAuthenticated => token.value != null;
@@ -146,13 +150,36 @@ class ApiService extends GetxService {
         email.value = body['email'];
         role.value = body['role'];
         orgId.value = body['org_id'];
+        orgName.value = body['org_name'];
         delegationId.value = body['delegation_id'];
         delegationName.value = body['delegation_name'] ?? 'General';
+        organizationName.value = body['org_name'] ?? 'Personal Workspace';
         inviteCode.value = body['invite_code'];
+        profileImageData.value = body['profile_image_data'];
         googleDriveConnected.value = body['google_drive_connected'] == true;
       }
     } catch (e) {
       print("Get profile error: $e");
+    }
+  }
+
+  Future<bool> updateOrganizationName(String name) async {
+    try {
+      final response = await _put('/auth/organization', {'name': name});
+      if (response.statusCode == 200) {
+        await getProfile();
+        return true;
+      }
+
+      final errMsg =
+          response.body?['error'] ?? 'Gagal memperbarui nama organisasi.';
+      Get.snackbar('Gagal Memperbarui', errMsg,
+          snackPosition: SnackPosition.BOTTOM);
+      return false;
+    } catch (e) {
+      Get.snackbar('Kesalahan Jaringan', 'Gagal menghubungi server: $e',
+          snackPosition: SnackPosition.BOTTOM);
+      return false;
     }
   }
 
@@ -366,6 +393,18 @@ class ApiService extends GetxService {
     return [];
   }
 
+  Future<List<dynamic>> getAssetsByDelegation(String delegationId) async {
+    try {
+      final response = await _get('/auth/assets/by-delegation/$delegationId');
+      if (response.statusCode == 200) {
+        return response.body as List<dynamic>;
+      }
+    } catch (e) {
+      print("Get assets by delegation error: $e");
+    }
+    return [];
+  }
+
   Future<bool> deleteAsset(String assetId) async {
     try {
       final response = await _delete('/auth/assets/$assetId');
@@ -494,7 +533,8 @@ class ApiService extends GetxService {
 
   Future<Map<String, dynamic>?> getDocumentDetail(String docId) async {
     try {
-      final response = await _get('/document/$docId');
+      final safeDocId = Uri.encodeComponent(docId);
+      final response = await _get('/document/$safeDocId');
       if (response.statusCode == 200) {
         return response.body as Map<String, dynamic>;
       }
@@ -504,9 +544,61 @@ class ApiService extends GetxService {
     return null;
   }
 
+  Future<List<int>?> downloadDocumentBytes(String docId) async {
+    try {
+      final safeDocId = Uri.encodeComponent(docId);
+      final uri = Uri.parse('${baseUrl.value}/document/download/$safeDocId');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          if (token.value != null) 'Authorization': 'Bearer ${token.value}',
+        },
+      );
+
+      debugPrint('[DEBUG downloadDocumentBytes] status=${response.statusCode}');
+      debugPrint(
+          '[DEBUG downloadDocumentBytes] content-type=${response.headers['content-type']}');
+      debugPrint(
+          '[DEBUG downloadDocumentBytes] bytes=${response.bodyBytes.length}');
+      debugPrint(
+          '[DEBUG downloadDocumentBytes] body preview=${response.body.length > 100 ? response.body.substring(0, 100) : response.body}');
+
+      if (response.statusCode == 200) {
+        if (response.bodyBytes.isNotEmpty) {
+          return response.bodyBytes;
+        }
+
+        Get.snackbar(
+          'Download Error',
+          'Response berhasil, tetapi file kosong.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return null;
+      }
+
+      Get.snackbar(
+        'Download Error',
+        response.body.isNotEmpty
+            ? response.body
+            : 'Gagal mengunduh dokumen. Status: ${response.statusCode}',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Download Error',
+        'Gagal mengunduh dokumen: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+
+    return null;
+  }
+
   Future<bool> deleteDocument(String docId) async {
     try {
-      final response = await _delete('/document/$docId');
+      final safeDocId = Uri.encodeComponent(docId);
+      final response = await _delete('/document/$safeDocId');
       return response.statusCode == 200;
     } catch (e) {
       print("Delete document error: $e");
@@ -516,7 +608,8 @@ class ApiService extends GetxService {
 
   Future<bool> dispositionDocument(String docId, String delegationId) async {
     try {
-      final response = await _post('/document/disposition/$docId', {
+      final safeDocId = Uri.encodeComponent(docId);
+      final response = await _post('/document/disposition/$safeDocId', {
         'delegation_id': delegationId,
       });
       return response.statusCode == 200;
@@ -529,6 +622,7 @@ class ApiService extends GetxService {
   Future<Map<String, dynamic>?> replaceDocument(String docId,
       {List<int>? bytes, String? filename, String? text}) async {
     try {
+      final safeDocId = Uri.encodeComponent(docId);
       dynamic payload;
       if (bytes != null && filename != null) {
         String contentType = 'image/jpeg';
@@ -551,7 +645,7 @@ class ApiService extends GetxService {
         return null;
       }
 
-      final response = await _post('/document/replace/$docId', payload);
+      final response = await _put('/document/replace/$safeDocId', payload);
       if (response.statusCode == 200) {
         return response.body as Map<String, dynamic>;
       }
@@ -682,6 +776,40 @@ class ApiService extends GetxService {
     return null;
   }
 
+  Future<Map<String, dynamic>?> updateProfile({
+    String? usernameInput,
+    String? orgNameInput,
+    String? profileImageBase64,
+  }) async {
+    try {
+      final payload = <String, dynamic>{};
+      if (usernameInput != null) payload['username'] = usernameInput;
+      if (orgNameInput != null) payload['org_name'] = orgNameInput;
+      if (profileImageBase64 != null) {
+        payload['profile_image_data'] = profileImageBase64;
+      }
+
+      final response = await _put('/auth/profile', payload);
+      if (response.statusCode == 200 && response.body != null) {
+        await getProfile();
+        return Map<String, dynamic>.from(response.body as Map);
+      }
+    } catch (e) {
+      print("Update profile error: $e");
+    }
+    return null;
+  }
+
+  Future<bool> deleteChatHistory(String docId) async {
+    try {
+      final response = await _delete('/ai/chat/$docId');
+      return response.statusCode == 200;
+    } catch (e) {
+      print("Delete chat history error: $e");
+      return false;
+    }
+  }
+
   Future<Map<String, dynamic>?> chatGlobal(String message,
       {List<Map<String, dynamic>>? history}) async {
     try {
@@ -776,6 +904,30 @@ class ApiService extends GetxService {
     return null;
   }
 
+  Future<List<dynamic>> getRecentNotifications({int limit = 15}) async {
+    try {
+      final response = await _get('/notification/recent?limit=$limit');
+      if (response.statusCode == 200 && response.body != null) {
+        return response.body as List<dynamic>;
+      }
+    } catch (e) {
+      print("Get notifications error: $e");
+    }
+    return [];
+  }
+
+  Future<List<dynamic>> getActivityLogs({int limit = 50}) async {
+    try {
+      final response = await _get('/auth/activity-logs?limit=$limit');
+      if (response.statusCode == 200 && response.body != null) {
+        return response.body as List<dynamic>;
+      }
+    } catch (e) {
+      print("Get activity logs error: $e");
+    }
+    return [];
+  }
+
   Future<Map<String, dynamic>?> getEventInsights() async {
     try {
       final response = await _get('/insight/api/insights');
@@ -796,6 +948,7 @@ class ApiService extends GetxService {
     required String date,
     required String time,
     required String location,
+    String? currentLocationLabel,
     required String kop,
     String? ttd,
   }) async {
@@ -806,6 +959,7 @@ class ApiService extends GetxService {
         'date': date,
         'time': time,
         'location': location,
+        'current_location_label': currentLocationLabel ?? '',
         'kop': kop,
         'ttd': ttd ?? '',
       });
@@ -818,6 +972,18 @@ class ApiService extends GetxService {
     return null;
   }
 
+  Future<Map<String, dynamic>?> approveSuratTugasRequest(String docId) async {
+    try {
+      final response = await _post('/generator/surat-tugas/$docId/approve', {});
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return response.body as Map<String, dynamic>;
+      }
+    } catch (e) {
+      print("Approve surat tugas error: $e");
+    }
+    return null;
+  }
+
   void logout() {
     token.value = null;
     userId.value = null;
@@ -825,8 +991,11 @@ class ApiService extends GetxService {
     email.value = null;
     role.value = null;
     orgId.value = null;
+    orgName.value = null;
     delegationId.value = null;
     delegationName.value = null;
+    inviteCode.value = null;
+    profileImageData.value = null;
     googleDriveConnected.value = false;
   }
 }
