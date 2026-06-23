@@ -29,7 +29,7 @@ class ApiService extends GetxService {
   void onInit() {
     super.onInit();
     // Configure GetConnect
-    _connect.timeout = const Duration(seconds: 30);
+    _connect.timeout = const Duration(seconds: 120);
 
     // Add request interceptor to inject JWT token automatically
     _connect.httpClient.addRequestModifier<dynamic>((request) {
