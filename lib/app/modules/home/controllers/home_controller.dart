@@ -98,7 +98,8 @@ class HomeController extends GetxController {
         final classification = item['classification'] ?? {};
         parsedDocs.add(Document(
           id: item['doc_id'] ?? '',
-          title: item['filename'] ?? 'Untitled Doc',
+          title: item['title'] ?? item['filename'] ?? 'Untitled Doc',
+          filename: item['filename'] ?? 'document.jpg',
           summary: item['content'] ?? 'No text extracted.',
           status: item['status'] ?? 'processed',
           type: classification['label_name'] ?? 'Letter',
@@ -216,6 +217,7 @@ class HomeController extends GetxController {
       final tempDoc = Document(
         id: tempId,
         title: filename,
+        filename: filename,
         summary: 'Dokumen sedang diproses di server oleh pipeline AI...',
         status: 'processing',
         type: 'Processing',
@@ -287,7 +289,8 @@ class HomeController extends GetxController {
                 final classification = result['classification'] ?? {};
                 final completedDoc = Document(
                   id: result['doc_id'] ?? 'unknown',
-                  title: result['filename'] ?? filename!,
+                  title: result['title'] ?? result['filename'] ?? filename!,
+                  filename: result['filename'] ?? filename!,
                   summary: result['content'] ?? 'No text extracted.',
                   status: result['status'] ?? 'processed',
                   type: classification['label_name'] ?? 'Letter',

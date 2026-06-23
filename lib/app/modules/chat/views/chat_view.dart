@@ -521,6 +521,7 @@ class ChatView extends GetView<ChatController> {
                             final doc = Document(
                               id: ref['doc_id'] ?? '',
                               title: filename,
+                              filename: filename,
                               summary: 'Loading details...',
                               status: 'processed',
                               type: 'Document',

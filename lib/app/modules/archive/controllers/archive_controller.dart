@@ -37,7 +37,8 @@ class ArchiveController extends GetxController {
         final classification = item['classification'] ?? {};
         parsed.add(Document(
           id: item['doc_id'] ?? '',
-          title: item['filename'] ?? 'Untitled Doc',
+          title: item['title'] ?? item['filename'] ?? 'Untitled Doc',
+          filename: item['filename'] ?? 'document.jpg',
           summary: item['content'] ?? 'No text extracted.',
           status: item['status'] ?? 'processed',
           type: classification['label_name'] ?? 'Letter',
@@ -54,6 +55,7 @@ class ArchiveController extends GetxController {
           Document(
             id: 'dummy_invitation_001',
             title: 'Undangan Rapat Koordinasi Wilayah',
+            filename: 'Undangan Rapat Koordinasi Wilayah.pdf',
             summary:
                 'Kami mengundang Bapak/Ibu untuk menghadiri rapat koordinasi wilayah pada hari Senin, 20 Oktober 2026 pukul 09:00 WIB bertempat di Ruang Rapat Utama Balai Kota Jakarta.',
             status: 'processed',
@@ -495,7 +497,7 @@ class ArchiveController extends GetxController {
         return;
       }
 
-      final pathOrMessage = await saveDocumentToLocal(bytes, doc.title);
+      final pathOrMessage = await saveDocumentToLocal(bytes, doc.filename);
       if (canDeleteDocumentBackupFile(pathOrMessage)) {
         await backupRegistry.registerBackupPath(doc.id, pathOrMessage);
       }
@@ -533,7 +535,7 @@ class ArchiveController extends GetxController {
           continue;
         }
 
-        final pathOrMessage = await saveDocumentToLocal(bytes, doc.title);
+        final pathOrMessage = await saveDocumentToLocal(bytes, doc.filename);
         if (canDeleteDocumentBackupFile(pathOrMessage)) {
           await backupRegistry.registerBackupPath(doc.id, pathOrMessage);
         }
