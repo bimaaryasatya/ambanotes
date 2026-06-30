@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService extends GetxService {
@@ -28,6 +29,21 @@ class ApiService extends GetxService {
   @override
   void onInit() {
     super.onInit();
+    
+    // Restore session from local storage
+    final storage = GetStorage();
+    token.value = storage.read('token');
+    userId.value = storage.read('userId');
+    username.value = storage.read('username');
+    email.value = storage.read('email');
+    role.value = storage.read('role');
+    orgId.value = storage.read('orgId');
+    delegationId.value = storage.read('delegationId');
+    
+    if (isAuthenticated) {
+      getProfile(); // Refresh profile in background
+    }
+
     // Configure GetConnect
     _connect.timeout = const Duration(seconds: 120);
 
@@ -82,6 +98,16 @@ class ApiService extends GetxService {
         role.value = user['role'];
         orgId.value = user['org_id'];
         delegationId.value = user['delegation_id'];
+
+        // Save session to local storage
+        final storage = GetStorage();
+        await storage.write('token', token.value);
+        await storage.write('userId', userId.value);
+        await storage.write('username', username.value);
+        await storage.write('email', email.value);
+        await storage.write('role', role.value);
+        await storage.write('orgId', orgId.value);
+        await storage.write('delegationId', delegationId.value);
 
         await getProfile(); // Load detailed profile
         return true;
@@ -997,5 +1023,15 @@ class ApiService extends GetxService {
     inviteCode.value = null;
     profileImageData.value = null;
     googleDriveConnected.value = false;
+
+    // Clear session from local storage
+    final storage = GetStorage();
+    storage.remove('token');
+    storage.remove('userId');
+    storage.remove('username');
+    storage.remove('email');
+    storage.remove('role');
+    storage.remove('orgId');
+    storage.remove('delegationId');
   }
 }
