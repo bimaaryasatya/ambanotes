@@ -15,9 +15,9 @@ class SplashView extends GetView<SplashController> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF0F172A), // Slate 900
-              Color(0xFF1E293B), // Slate 800
-              Color(0xFF0F172A), // Slate 900
+              Color(0xFF00382F), // Darker green
+              Color(0xFF004D40), // Theme primary green
+              Color(0xFF00261F), // Deep green
             ],
           ),
         ),
@@ -52,7 +52,7 @@ class SplashView extends GetView<SplashController> {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.blueAccent.withOpacity(0.3),
+                              color: const Color(0xFF8ADBC6).withOpacity(0.3),
                               blurRadius: 30,
                               spreadRadius: 5,
                             ),
@@ -83,7 +83,7 @@ class SplashView extends GetView<SplashController> {
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w400,
-                          color: const Color(0xFF94A3B8), // Slate 400
+                          color: const Color(0xFF8ADBC6).withOpacity(0.7),
                           letterSpacing: 0.2,
                         ),
                       ),
@@ -106,7 +106,7 @@ class SplashView extends GetView<SplashController> {
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8ADBC6)),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -114,7 +114,7 @@ class SplashView extends GetView<SplashController> {
                         'Memuat sistem...',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: const Color(0xFF64748B), // Slate 500
+                          color: const Color(0xFF8ADBC6).withOpacity(0.6),
                         ),
                       ),
                     ],
