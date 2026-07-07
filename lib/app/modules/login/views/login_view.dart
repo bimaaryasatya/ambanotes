@@ -20,17 +20,11 @@ class LoginView extends GetView<LoginController> {
             children: [
               const SizedBox(height: 60),
               Center(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryContainer,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    LucideIcons.layoutDashboard,
-                    size: 40,
-                    color: AppTheme.primary,
-                  ),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  width: 80,
+                  height: 80,
+                  fit: BoxFit.contain,
                 ),
               ),
               const SizedBox(height: 24),

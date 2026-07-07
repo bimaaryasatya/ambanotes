@@ -42,26 +42,12 @@ class SplashView extends GetView<SplashController> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Logo Container
-                      Container(
+                      // Logo
+                      Image.asset(
+                        'assets/images/logo.png',
                         width: 140,
                         height: 140,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF8ADBC6).withOpacity(0.3),
-                              blurRadius: 30,
-                              spreadRadius: 5,
-                            ),
-                          ],
-                        ),
-                        child: Image.asset(
-                          'assets/images/logo.png',
-                          fit: BoxFit.contain,
-                        ),
+                        fit: BoxFit.contain,
                       ),
                       const SizedBox(height: 28),
                       
