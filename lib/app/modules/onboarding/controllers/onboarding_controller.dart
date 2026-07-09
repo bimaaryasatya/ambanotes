@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../data/services/api_service.dart';
+import '../../../data/models/models.dart';
+import '../../archive/controllers/archive_controller.dart';
+import '../../home/controllers/home_controller.dart';
+import '../../../routes/app_pages.dart';
 
 class OnboardingController extends GetxController {
   final apiService = Get.find<ApiService>();
@@ -9,22 +13,24 @@ class OnboardingController extends GetxController {
   final RxBool isActive = false.obs;
   final Rx<Rect?> cutoutRect = Rx<Rect?>(null);
   final Rx<Offset?> tooltipAnchor = Rx<Offset?>(null);
+  final RxString currentRoute = ''.obs;
 
   final GlobalKey quickActionsGridKey = GlobalKey();
+  final GlobalKey processingSectionKey = GlobalKey();
   final GlobalKey archiveTabKey = GlobalKey();
   final GlobalKey firstDocumentKey = GlobalKey();
   final GlobalKey aiSummaryKey = GlobalKey();
   final GlobalKey disposisiKey = GlobalKey();
   final GlobalKey metadataKey = GlobalKey();
 
-  static const int maxStep = 7;
+  static const int maxStep = 8;
 
   bool get hasCompleted => false;
   bool get isOwner => apiService.isOwner;
 
   bool get shouldShowCurrentStep {
     if (!isActive.value) return false;
-    if (currentStep.value == 5 && !isOwner) return false;
+    if (currentStep.value == 6 && !isOwner) return false;
     return true;
   }
 
@@ -33,14 +39,16 @@ class OnboardingController extends GetxController {
       case 1:
         return quickActionsGridKey;
       case 2:
-        return archiveTabKey;
+        return processingSectionKey;
       case 3:
-        return firstDocumentKey;
+        return archiveTabKey;
       case 4:
-        return aiSummaryKey;
+        return firstDocumentKey;
       case 5:
-        return isOwner ? disposisiKey : null;
+        return aiSummaryKey;
       case 6:
+        return isOwner ? disposisiKey : null;
+      case 7:
         return metadataKey;
       default:
         return null;
@@ -48,13 +56,19 @@ class OnboardingController extends GetxController {
   }
 
   bool get isArchiveDetailStep =>
-      currentStep.value >= 4 && currentStep.value <= maxStep;
+      currentStep.value >= 5 && currentStep.value <= maxStep;
 
   @override
   void onInit() {
     super.onInit();
     if (!hasCompleted) {
       Future.delayed(const Duration(milliseconds: 600), startOnboarding);
+    }
+  }
+
+  void updateRoute(String? route) {
+    if (route != null) {
+      currentRoute.value = route;
     }
   }
 
@@ -69,10 +83,53 @@ class OnboardingController extends GetxController {
       return;
     }
     currentStep.value++;
-    if (currentStep.value == 5 && !isOwner) {
+    if (currentStep.value == 6 && !isOwner) {
       currentStep.value++;
     }
+
+    // Automatically skip Step 2 ("Waiting for Document Processing") if there are no processing documents
+    if (currentStep.value == 2) {
+      final homeController = Get.isRegistered<HomeController>() ? Get.find<HomeController>() : null;
+      final processingDocs = homeController?.processingDocuments ?? [];
+      if (processingDocs.isEmpty) {
+        currentStep.value++; // Skip to Step 3 ("View in Files")
+      }
+    }
+
     _scheduleMeasure();
+
+    // Automatically navigate when user clicks "Skip" on tooltips to prevent onboarding from closing
+    if (currentStep.value == 4) {
+      Get.offAllNamed(Routes.ARCHIVE);
+    } else if (currentStep.value == 5) {
+      _openFirstDocument();
+    }
+  }
+
+  void _openFirstDocument() {
+    if (Get.isRegistered<ArchiveController>()) {
+      final archiveCtrl = Get.find<ArchiveController>();
+      if (archiveCtrl.documents.isNotEmpty) {
+        final doc = archiveCtrl.documents.first;
+        Get.toNamed(Routes.ARCHIVE_DETAIL, arguments: doc);
+        return;
+      }
+    }
+
+    final dummyDoc = Document(
+      id: 'dummy_invitation_001',
+      title: 'Undangan Rapat Koordinasi Wilayah',
+      filename: 'Undangan Rapat Koordinasi Wilayah.pdf',
+      summary:
+          'Kami mengundang Bapak/Ibu untuk menghadiri rapat koordinasi wilayah pada hari Senin, 20 Oktober 2026 pukul 09:00 WIB bertempat di Ruang Rapat Utama Balai Kota Jakarta.',
+      status: 'processed',
+      type: 'Undangan',
+      archivedDate: 'Just now',
+      size: '450 KB',
+      delegationId: 'general',
+      delegationName: 'General',
+    );
+    Get.toNamed(Routes.ARCHIVE_DETAIL, arguments: dummyDoc);
   }
 
   void completeOnboarding() {
@@ -113,27 +170,20 @@ class OnboardingController extends GetxController {
 
   void onUploadProcessing(String docId) {
     if (currentStep.value == 1) {
-      _waitForUploadComplete(docId);
+      currentStep.value = 2;
+      _scheduleMeasure();
     }
   }
 
-  void _waitForUploadComplete(String docId) {
-    Future.doWhile(() async {
-      await Future.delayed(const Duration(seconds: 1));
-      if (currentStep.value != 1) return false;
-      final key = archiveTabKey;
-      final hasTab = key.currentContext?.findRenderObject() != null;
-      if (hasTab) {
-        currentStep.value++;
-        _scheduleMeasure();
-        return false;
-      }
-      return true;
-    });
+  void onProcessingDone() {
+    if (currentStep.value == 2) {
+      currentStep.value++;
+      _scheduleMeasure();
+    }
   }
 
   void onTabChanged(int index) {
-    if (currentStep.value == 2 && index == 1) {
+    if (currentStep.value == 3 && index == 1) {
       _waitForDocumentList();
     }
   }
@@ -145,24 +195,24 @@ class OnboardingController extends GetxController {
       attempts++;
       final key = firstDocumentKey;
       final hasDoc = key.currentContext?.findRenderObject() != null;
-      if (hasDoc && currentStep.value == 2) {
+      if (hasDoc && currentStep.value == 3) {
         currentStep.value++;
         _scheduleMeasure();
         return false;
       }
       if (attempts > 30) {
-        if (currentStep.value == 2) {
+        if (currentStep.value == 3) {
           currentStep.value++;
           _scheduleMeasure();
         }
         return false;
       }
-      return currentStep.value == 2;
+      return currentStep.value == 3;
     });
   }
 
   void onDocumentTapped() {
-    if (currentStep.value == 3) {
+    if (currentStep.value == 4) {
       _scheduleStepAdvance();
     }
   }

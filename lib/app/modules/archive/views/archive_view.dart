@@ -15,11 +15,7 @@ class ArchiveView extends GetView<ArchiveController> {
   @override
   Widget build(BuildContext context) {
     final scaffoldColor = Theme.of(context).scaffoldBackgroundColor;
-    return ClipRect(
-      child: OnboardingOverlay(
-        minStep: 3,
-        maxStep: 3,
-        child: Scaffold(
+    return Scaffold(
         backgroundColor: scaffoldColor,
         bottomNavigationBar: const CustomBottomNavBar(currentIndex: 1),
         appBar: AppBar(
@@ -71,8 +67,6 @@ class ArchiveView extends GetView<ArchiveController> {
             ),
           ],
         ),
-        ),
-      ),
     );
   }
 
@@ -200,6 +194,21 @@ class ArchiveView extends GetView<ArchiveController> {
 
   Widget _buildDocumentList() {
     return Obx(() {
+      if (controller.isLoading.value) {
+        return const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text(
+                'Memuat dokumen...',
+                style: TextStyle(color: AppTheme.outline),
+              ),
+            ],
+          ),
+        );
+      }
       final filteredDocs = controller.filteredDocuments;
       if (filteredDocs.isEmpty) {
         return const Center(
@@ -216,11 +225,7 @@ class ArchiveView extends GetView<ArchiveController> {
             final onboardingCtrl = Get.find<OnboardingController>();
             final isFirstProcessed = index == 0 && doc.status != 'processing';
             return SizedBox(
-              key: (isFirstProcessed &&
-                      onboardingCtrl.isActive.value &&
-                      onboardingCtrl.currentStep.value == 3)
-                  ? onboardingCtrl.firstDocumentKey
-                  : null,
+              key: isFirstProcessed ? onboardingCtrl.firstDocumentKey : null,
               child: _buildDocumentItem(doc),
             );
           });

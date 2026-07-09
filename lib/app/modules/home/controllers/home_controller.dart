@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:ambanotes/app/data/models/models.dart';
@@ -23,6 +24,8 @@ class HomeController extends GetxController {
   final isUploading = false.obs;
   final isLoadingNotifications = false.obs;
 
+  Timer? _processingPollTimer;
+
   List<Document> get processingDocuments =>
       documents.where((doc) => doc.status.toLowerCase() == 'processing').toList();
 
@@ -30,6 +33,33 @@ class HomeController extends GetxController {
   void onInit() {
     super.onInit();
     fetchDashboardData();
+  }
+
+  @override
+  void onClose() {
+    _stopProcessingPoll();
+    super.onClose();
+  }
+
+  void _startProcessingPoll() {
+    _stopProcessingPoll();
+    _processingPollTimer = Timer.periodic(const Duration(seconds: 8), (_) async {
+      await fetchDashboardData();
+      if (Get.isRegistered<ArchiveController>()) {
+        Get.find<ArchiveController>().fetchDocuments();
+      }
+      if (processingDocuments.isEmpty) {
+        _stopProcessingPoll();
+        if (Get.isRegistered<OnboardingController>()) {
+          Get.find<OnboardingController>().onProcessingDone();
+        }
+      }
+    });
+  }
+
+  void _stopProcessingPoll() {
+    _processingPollTimer?.cancel();
+    _processingPollTimer = null;
   }
 
   // ... (keeping fetchDashboardData intact)
@@ -268,48 +298,76 @@ class HomeController extends GetxController {
 
         if (result != null) {
           // Trigger a silent refresh so both controllers get fully populated updated states
-          fetchDashboardData();
+          fetchDashboardData().then((_) {
+            if (processingDocuments.isNotEmpty) {
+              _startProcessingPoll();
+            } else {
+              if (Get.isRegistered<OnboardingController>()) {
+                Get.find<OnboardingController>().onProcessingDone();
+              }
+            }
+          });
           if (Get.isRegistered<ArchiveController>()) {
             Get.find<ArchiveController>().fetchDocuments();
           }
 
-          if (Get.isRegistered<ProfileController>()) {
-            final profile = Get.find<ProfileController>();
-            if (profile.enableNotifications.value && profile.notifyProcessing.value) {
-              Get.find<NotificationService>().showNotification(
-                "Analisis AI Selesai",
-                "Dokumen '$filename' berhasil diekstrak dan siap diakses.",
-              );
-            }
-          }
+          final status = result['status'] ?? 'processed';
+          final isProcessing = status == 'processing';
 
-          Get.snackbar(
-            "Dokumen Selesai Diproses",
-            "Analisis AI selesai untuk '$filename'!",
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.green.withOpacity(0.9),
-            colorText: Colors.white,
-            duration: const Duration(seconds: 5),
-            mainButton: TextButton(
-              onPressed: () {
-                final classification = result['classification'] ?? {};
-                final completedDoc = Document(
-                  id: result['doc_id'] ?? 'unknown',
-                  title: result['title'] ?? result['filename'] ?? filename!,
-                  filename: result['filename'] ?? filename!,
-                  summary: result['content'] ?? 'No text extracted.',
-                  status: result['status'] ?? 'processed',
-                  type: classification['label_name'] ?? 'Letter',
-                  archivedDate: result['uploaded_at'] ?? 'Just now',
-                  size: '1.2 MB',
-                  delegationId: result['delegation_id'] ?? 'general',
-                  delegationName: result['delegation_name'] ?? 'General',
+          if (isProcessing) {
+            Get.snackbar(
+              "Unggah Berhasil",
+              "Dokumen '$filename' berhasil diunggah dan sedang dianalisis di latar belakang.",
+              snackPosition: SnackPosition.BOTTOM,
+              backgroundColor: AppTheme.primary.withOpacity(0.9),
+              colorText: Colors.white,
+              duration: const Duration(seconds: 4),
+              mainButton: TextButton(
+                onPressed: () {
+                  Get.offAllNamed(Routes.ARCHIVE);
+                },
+                child: const Text("LIHAT FILES", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            );
+          } else {
+            if (Get.isRegistered<ProfileController>()) {
+              final profile = Get.find<ProfileController>();
+              if (profile.enableNotifications.value && profile.notifyProcessing.value) {
+                Get.find<NotificationService>().showNotification(
+                  "Analisis AI Selesai",
+                  "Dokumen '$filename' berhasil diekstrak dan siap diakses.",
                 );
-                Get.toNamed(Routes.ARCHIVE_DETAIL, arguments: completedDoc);
-              },
-              child: const Text("BUKA DETAIL", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          );
+              }
+            }
+
+            Get.snackbar(
+              "Dokumen Selesai Diproses",
+              "Analisis AI selesai untuk '$filename'!",
+              snackPosition: SnackPosition.BOTTOM,
+              backgroundColor: Colors.green.withOpacity(0.9),
+              colorText: Colors.white,
+              duration: const Duration(seconds: 5),
+              mainButton: TextButton(
+                onPressed: () {
+                  final classification = result['classification'] ?? {};
+                  final completedDoc = Document(
+                    id: result['doc_id'] ?? 'unknown',
+                    title: result['title'] ?? result['filename'] ?? filename!,
+                    filename: result['filename'] ?? filename!,
+                    summary: result['content'] ?? 'No text extracted.',
+                    status: result['status'] ?? 'processed',
+                    type: classification['label_name'] ?? 'Letter',
+                    archivedDate: result['uploaded_at'] ?? 'Just now',
+                    size: '1.2 MB',
+                    delegationId: result['delegation_id'] ?? 'general',
+                    delegationName: result['delegation_name'] ?? 'General',
+                  );
+                  Get.toNamed(Routes.ARCHIVE_DETAIL, arguments: completedDoc);
+                },
+                child: const Text("BUKA DETAIL", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            );
+          }
         } else {
           Get.snackbar(
             "Upload Gagal",

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../modules/onboarding/controllers/onboarding_controller.dart';
 import '../theme/app_theme.dart';
+import '../routes/app_pages.dart';
 
 class OnboardingOverlay extends StatelessWidget {
   final int minStep;
@@ -13,7 +14,30 @@ class OnboardingOverlay extends StatelessWidget {
     super.key,
     required this.child,
     this.minStep = 0,
-    this.maxStep = 7,
+    this.maxStep = 8,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        child,
+        _OnboardingOverlayContent(
+          minStep: minStep,
+          maxStep: maxStep,
+        ),
+      ],
+    );
+  }
+}
+
+class _OnboardingOverlayContent extends StatelessWidget {
+  final int minStep;
+  final int maxStep;
+
+  const _OnboardingOverlayContent({
+    required this.minStep,
+    required this.maxStep,
   });
 
   @override
@@ -21,16 +45,24 @@ class OnboardingOverlay extends StatelessWidget {
     return Obx(() {
       final controller = Get.find<OnboardingController>();
       final step = controller.currentStep.value;
-      final active =
-          controller.isActive.value && step >= minStep && step <= maxStep;
 
-      if (!active) return child;
+      final currentRoute = controller.currentRoute.value;
+      final isValidRoute = currentRoute == Routes.HOME ||
+          currentRoute == Routes.ARCHIVE ||
+          currentRoute == Routes.ARCHIVE_DETAIL;
 
-      final showCutout = step >= 1 && step <= 6;
+      final active = controller.isActive.value &&
+          step >= minStep &&
+          step <= maxStep &&
+          isValidRoute &&
+          controller.apiService.isAuthenticated;
+
+      if (!active) return const SizedBox.shrink();
+
+      final showCutout = step >= 1 && step <= 7;
 
       return Stack(
         children: [
-          child,
           if (showCutout && controller.cutoutRect.value != null)
             Positioned.fill(
               child: ClipPath(
@@ -45,7 +77,7 @@ class OnboardingOverlay extends StatelessWidget {
             ),
           if (showCutout) _buildTooltip(context),
           if (step == 0) _buildWelcomeCard(),
-          if (step == 7) _buildCompletionCard(),
+          if (step == 8) _buildCompletionCard(),
         ],
       );
     });
@@ -54,32 +86,31 @@ class OnboardingOverlay extends StatelessWidget {
   Widget _buildTooltip(BuildContext context) {
     final controller = Get.find<OnboardingController>();
     final rect = controller.cutoutRect.value;
-    if (rect == null) return const SizedBox.shrink();
+    final step = controller.currentStep.value;
+
+    if (rect == null) {
+      return Center(
+        child: _TooltipCard(step: step),
+      );
+    }
 
     final screen = MediaQuery.of(context).size;
     const cardWidth = 300.0;
-    // Estimating a safer maximum height for dynamic card contents to prevent overflow
     const cardHeight = 240.0;
     
-    final step = controller.currentStep.value;
     final spaceAbove = rect.top;
     final spaceBelow = screen.height - rect.bottom;
     
-    // Check if step uses a bottom navbar (steps 1, 2, 3)
     final hasNavbar = step >= 1 && step <= 3;
     final bottomInset = MediaQuery.of(context).padding.bottom;
     final bottomThreshold = hasNavbar ? (80.0 + bottomInset) : (16.0 + bottomInset);
     
-    // Decide to place above if there isn't enough space below, or if the highlighted element is deep
     final placeAbove = (spaceBelow - bottomThreshold) < (cardHeight + 20) && spaceAbove > (cardHeight + 20);
 
     double top = placeAbove
         ? rect.top - cardHeight - 16
         : rect.bottom + 16;
         
-    // Clamp the top position so the card stays within safe screen bounds, 
-    // ensuring it never covers the bottom navbar or safe area.
-    // We check min/max values to prevent clamp throwing assertions if constraints are negative/0.
     final double minTop = MediaQuery.of(context).padding.top + 8.0;
     double maxTop = screen.height - cardHeight - bottomThreshold;
     if (maxTop < minTop) {
@@ -258,7 +289,7 @@ class _TooltipCard extends StatelessWidget {
                   onTap: controller.skipOnboarding,
                   child: Container(
                     padding: const EdgeInsets.all(4),
-                    child: Icon(
+                    child: const Icon(
                       LucideIcons.x,
                       size: 16,
                       color: AppTheme.outline,
@@ -352,6 +383,12 @@ const _stepData = <_StepData>[
     title: 'Upload or Scan a Document',
     description:
         'Tap Scan to capture with your camera, or Upload to pick a file from your device. Your document will be analyzed by AI.',
+    buttonLabel: 'Skip \u2192',
+  ),
+  _StepData(
+    title: 'Waiting for Document Processing',
+    description:
+        'Your document is being processed by AI. Please wait for OCR and analysis to complete, or skip this step.',
     buttonLabel: 'Skip \u2192',
   ),
   _StepData(

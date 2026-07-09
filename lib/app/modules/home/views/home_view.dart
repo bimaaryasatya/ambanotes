@@ -17,11 +17,7 @@ class HomeView extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     final scaffoldColor = Theme.of(context).scaffoldBackgroundColor;
-    return ClipRect(
-      child: OnboardingOverlay(
-        minStep: 0,
-        maxStep: 2,
-        child: Scaffold(
+    return Scaffold(
         backgroundColor: scaffoldColor,
         bottomNavigationBar: const CustomBottomNavBar(currentIndex: 0),
         appBar: AppBar(
@@ -63,8 +59,6 @@ class HomeView extends GetView<HomeController> {
             ],
           ),
         ),
-        ),
-      ),
     );
   }
 
@@ -102,10 +96,7 @@ class HomeView extends GetView<HomeController> {
         Expanded(
           flex: 2,
           child: Row(
-            key: (onboardingCtrl.isActive.value &&
-                    onboardingCtrl.currentStep.value == 1)
-                ? onboardingCtrl.quickActionsGridKey
-                : null,
+            key: onboardingCtrl.quickActionsGridKey,
             children: [
               Expanded(child: _buildActionItem(actions[0], 0)),
               const SizedBox(width: 12),
@@ -205,7 +196,10 @@ class HomeView extends GetView<HomeController> {
         return const SizedBox.shrink();
       }
 
+      final onboardingCtrl = Get.find<OnboardingController>();
+
       return Container(
+        key: onboardingCtrl.processingSectionKey,
         width: double.infinity,
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(

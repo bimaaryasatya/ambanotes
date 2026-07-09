@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:ambanotes/app/routes/app_pages.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
@@ -22,10 +23,34 @@ class ArchiveController extends GetxController {
   final selectedDocIds = <String>{}.obs;
   final isSelectionMode = false.obs;
 
+  Timer? _processingPollTimer;
+
   @override
   void onInit() {
     super.onInit();
     fetchDocuments();
+  }
+
+  @override
+  void onClose() {
+    _stopProcessingPoll();
+    super.onClose();
+  }
+
+  void _startProcessingPoll() {
+    _stopProcessingPoll();
+    _processingPollTimer = Timer.periodic(const Duration(seconds: 8), (_) async {
+      await fetchDocuments();
+      final hasProcessing = documents.any((doc) => doc.status.toLowerCase() == 'processing');
+      if (!hasProcessing) {
+        _stopProcessingPoll();
+      }
+    });
+  }
+
+  void _stopProcessingPoll() {
+    _processingPollTimer?.cancel();
+    _processingPollTimer = null;
   }
 
   Future<void> fetchDocuments() async {
@@ -49,24 +74,33 @@ class ArchiveController extends GetxController {
         ));
       }
 
-      // Inject dummy invitation document for testing Surat Tugas feature
-      parsed.insert(
-          0,
-          Document(
-            id: 'dummy_invitation_001',
-            title: 'Undangan Rapat Koordinasi Wilayah',
-            filename: 'Undangan Rapat Koordinasi Wilayah.pdf',
-            summary:
-                'Kami mengundang Bapak/Ibu untuk menghadiri rapat koordinasi wilayah pada hari Senin, 20 Oktober 2026 pukul 09:00 WIB bertempat di Ruang Rapat Utama Balai Kota Jakarta.',
-            status: 'processed',
-            type: 'Undangan',
-            archivedDate: DateTime.now().toIso8601String(),
-            size: '450 KB',
-            delegationId: 'general',
-            delegationName: 'General',
-          ));
+      // Inject dummy invitation document for testing Surat Tugas feature only if no other documents exist
+      if (docList.isEmpty) {
+        parsed.insert(
+            0,
+            Document(
+              id: 'dummy_invitation_001',
+              title: 'Undangan Rapat Koordinasi Wilayah',
+              filename: 'Undangan Rapat Koordinasi Wilayah.pdf',
+              summary:
+                  'Kami mengundang Bapak/Ibu untuk menghadiri rapat koordinasi wilayah pada hari Senin, 20 Oktober 2026 pukul 09:00 WIB bertempat di Ruang Rapat Utama Balai Kota Jakarta.',
+              status: 'processed',
+              type: 'Undangan',
+              archivedDate: DateTime.now().toIso8601String(),
+              size: '450 KB',
+              delegationId: 'general',
+              delegationName: 'General',
+            ));
+      }
 
       documents.assignAll(parsed);
+
+      final hasProcessing = parsed.any((doc) => doc.status.toLowerCase() == 'processing');
+      if (hasProcessing) {
+        _startProcessingPoll();
+      } else {
+        _stopProcessingPoll();
+      }
     } catch (e) {
       print("Fetch documents error: $e");
     } finally {
@@ -560,7 +594,35 @@ class ArchiveController extends GetxController {
   }
 
   DateTime _parseArchivedDate(String value) {
-    return DateTime.tryParse(value) ?? DateTime.fromMillisecondsSinceEpoch(0);
+    if (value.isEmpty || value == 'Unknown' || value == 'Sedang diproses' || value == 'Just now') {
+      return DateTime.fromMillisecondsSinceEpoch(0);
+    }
+    final parsed = DateTime.tryParse(value);
+    if (parsed != null) return parsed;
+
+    try {
+      final cleanValue = value.replaceAll(RegExp(r'^[A-Za-z]+,\s+'), '');
+      final parts = cleanValue.split(RegExp(r'\s+'));
+      if (parts.length >= 4) {
+        final day = int.parse(parts[0]);
+        final monthStr = parts[1].toLowerCase();
+        final year = int.parse(parts[2]);
+        final timeParts = parts[3].split(':');
+        final hour = int.parse(timeParts[0]);
+        final minute = int.parse(timeParts[1]);
+        final second = int.parse(timeParts[2]);
+
+        final months = {
+          'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+          'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+        };
+        final month = months[monthStr.substring(0, 3)] ?? 1;
+
+        return DateTime.utc(year, month, day, hour, minute, second);
+      }
+    } catch (_) {}
+
+    return DateTime.fromMillisecondsSinceEpoch(0);
   }
 
   Future<bool?> _confirmDeleteDocument(Document doc) async {
