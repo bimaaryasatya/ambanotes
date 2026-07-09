@@ -15,61 +15,63 @@ class ArchiveView extends GetView<ArchiveController> {
   @override
   Widget build(BuildContext context) {
     final scaffoldColor = Theme.of(context).scaffoldBackgroundColor;
-    return OnboardingOverlay(
-      minStep: 3,
-      maxStep: 3,
-      child: Scaffold(
-      backgroundColor: scaffoldColor,
-      bottomNavigationBar: const CustomBottomNavBar(currentIndex: 1),
-      appBar: AppBar(
-        title: Obx(() {
-          if (controller.isSelectionMode.value) {
-            return Text('${controller.selectedDocIds.length} dipilih');
-          }
-          return const Text("Document Archive");
-        }),
-        actions: [
-          Obx(() {
-            if (!controller.isSelectionMode.value)
-              return const SizedBox.shrink();
-
-            return Row(
-              children: [
-                IconButton(
-                  icon: const Icon(LucideIcons.checkSquare),
-                  onPressed: controller.selectAllVisibleDocuments,
-                ),
-                IconButton(
-                  icon: const Icon(LucideIcons.download),
-                  onPressed: controller.backupSelectedDocuments,
-                ),
-                if (controller.apiService.isOwner)
-                  IconButton(
-                    icon: const Icon(LucideIcons.trash2, color: Colors.red),
-                    onPressed: controller.deleteSelectedDocuments,
-                  ),
-                IconButton(
-                  icon: const Icon(LucideIcons.x),
-                  onPressed: controller.clearSelection,
-                ),
-              ],
-            );
+    return ClipRect(
+      child: OnboardingOverlay(
+        minStep: 3,
+        maxStep: 3,
+        child: Scaffold(
+        backgroundColor: scaffoldColor,
+        bottomNavigationBar: const CustomBottomNavBar(currentIndex: 1),
+        appBar: AppBar(
+          title: Obx(() {
+            if (controller.isSelectionMode.value) {
+              return Text('${controller.selectedDocIds.length} dipilih');
+            }
+            return const Text("Document Archive");
           }),
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: _buildSearchBar(),
-          ),
-          _buildCategoryFilters(),
-          const SizedBox(height: 16),
-          Expanded(
-            child: _buildDocumentList(),
-          ),
-        ],
-      ),
+          actions: [
+            Obx(() {
+              if (!controller.isSelectionMode.value)
+                return const SizedBox.shrink();
+  
+              return Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(LucideIcons.checkSquare),
+                    onPressed: controller.selectAllVisibleDocuments,
+                  ),
+                  IconButton(
+                    icon: const Icon(LucideIcons.download),
+                    onPressed: controller.backupSelectedDocuments,
+                  ),
+                  if (controller.apiService.isOwner)
+                    IconButton(
+                      icon: const Icon(LucideIcons.trash2, color: Colors.red),
+                      onPressed: controller.deleteSelectedDocuments,
+                    ),
+                  IconButton(
+                    icon: const Icon(LucideIcons.x),
+                    onPressed: controller.clearSelection,
+                  ),
+                ],
+              );
+            }),
+          ],
+        ),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: _buildSearchBar(),
+            ),
+            _buildCategoryFilters(),
+            const SizedBox(height: 16),
+            Expanded(
+              child: _buildDocumentList(),
+            ),
+          ],
+        ),
+        ),
       ),
     );
   }
@@ -214,7 +216,11 @@ class ArchiveView extends GetView<ArchiveController> {
             final onboardingCtrl = Get.find<OnboardingController>();
             final isFirstProcessed = index == 0 && doc.status != 'processing';
             return SizedBox(
-              key: isFirstProcessed ? onboardingCtrl.firstDocumentKey : null,
+              key: (isFirstProcessed &&
+                      onboardingCtrl.isActive.value &&
+                      onboardingCtrl.currentStep.value == 3)
+                  ? onboardingCtrl.firstDocumentKey
+                  : null,
               child: _buildDocumentItem(doc),
             );
           });

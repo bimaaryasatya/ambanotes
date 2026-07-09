@@ -10,7 +10,8 @@ class AddView extends GetView<AddController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return ClipRect(
+      child: Scaffold(
       backgroundColor: AppTheme.surface,
       bottomNavigationBar: const CustomBottomNavBar(currentIndex: 2),
       appBar: AppBar(
@@ -27,6 +28,7 @@ class AddView extends GetView<AddController> {
           _buildActionCard(LucideIcons.uploadCloud, "Upload File", Colors.green),
           _buildActionCard(LucideIcons.folderPlus, "New Folder", Colors.blue),
         ],
+      ),
       ),
     );
   }

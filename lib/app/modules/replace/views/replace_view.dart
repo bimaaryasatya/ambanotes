@@ -11,7 +11,8 @@ class ReplaceView extends GetView<ReplaceController> {
   @override
   Widget build(BuildContext context) {
     final scaffoldColor = Theme.of(context).scaffoldBackgroundColor;
-    return Scaffold(
+    return ClipRect(
+      child: Scaffold(
       backgroundColor: scaffoldColor,
       appBar: AppBar(
         title: const Text(
@@ -40,6 +41,7 @@ class ReplaceView extends GetView<ReplaceController> {
           ],
         );
       }),
+      ),
     );
   }
 

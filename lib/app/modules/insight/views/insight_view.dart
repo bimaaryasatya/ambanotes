@@ -9,7 +9,8 @@ class InsightView extends GetView<InsightController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return ClipRect(
+      child: Scaffold(
       backgroundColor: AppTheme.surface,
       appBar: AppBar(
         title: const Text("Analitik & AI Insights", style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
@@ -56,6 +57,7 @@ class InsightView extends GetView<InsightController> {
           ),
         );
       }),
+      ),
     );
   }
 

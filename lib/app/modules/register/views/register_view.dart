@@ -9,7 +9,8 @@ class RegisterView extends GetView<RegisterController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return ClipRect(
+      child: Scaffold(
       backgroundColor: AppTheme.surface,
       appBar: AppBar(
         leading: IconButton(
@@ -42,6 +43,7 @@ class RegisterView extends GetView<RegisterController> {
                 ],
               ),
             )),
+      ),
       ),
     );
   }

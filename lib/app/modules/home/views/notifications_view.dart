@@ -11,7 +11,8 @@ class NotificationsView extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     final scaffoldColor = Theme.of(context).scaffoldBackgroundColor;
-    return Scaffold(
+    return ClipRect(
+      child: Scaffold(
       backgroundColor: scaffoldColor,
       appBar: AppBar(
         title: const Text('Notifikasi'),
@@ -21,7 +22,7 @@ class NotificationsView extends GetView<HomeController> {
             controller.notifications.isEmpty) {
           return const Center(child: CircularProgressIndicator());
         }
-
+  
         if (controller.notifications.isEmpty) {
           return const Center(
             child: Text(
@@ -30,7 +31,7 @@ class NotificationsView extends GetView<HomeController> {
             ),
           );
         }
-
+  
         return ListView.separated(
           padding: const EdgeInsets.all(20),
           itemCount: controller.notifications.length,
@@ -41,7 +42,7 @@ class NotificationsView extends GetView<HomeController> {
             final formattedTime = parsedTime != null
                 ? DateFormat('dd MMM yyyy, HH:mm').format(parsedTime.toLocal())
                 : 'Baru saja';
-
+  
             return Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -110,6 +111,7 @@ class NotificationsView extends GetView<HomeController> {
           },
         );
       }),
+      ),
     );
   }
 }

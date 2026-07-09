@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 
 class ApiService extends GetxService {
   // Using local computer IP address so both Android Emulator AND physical phones can access it
-  final baseUrl = 'http://192.168.56.157:5009'.obs;
+  final baseUrl = 'https://notes.bimazznxt.my.id/'.obs;
 
   final token = RxnString();
   final userId = RxnString();

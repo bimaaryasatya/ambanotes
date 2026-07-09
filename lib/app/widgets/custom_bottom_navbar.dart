@@ -90,7 +90,13 @@ class CustomBottomNavBar extends StatelessWidget {
       onTap: () => _onItemTapped(index),
       behavior: HitTestBehavior.opaque,
       child: Container(
-        key: index == 1 ? Get.find<OnboardingController>().archiveTabKey : null,
+        key: (index == 1 &&
+                currentIndex == 0 &&
+                Get.isRegistered<OnboardingController>() &&
+                Get.find<OnboardingController>().isActive.value &&
+                Get.find<OnboardingController>().currentStep.value == 2)
+            ? Get.find<OnboardingController>().archiveTabKey
+            : null,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),

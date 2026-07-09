@@ -17,51 +17,53 @@ class HomeView extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     final scaffoldColor = Theme.of(context).scaffoldBackgroundColor;
-    return OnboardingOverlay(
-      minStep: 0,
-      maxStep: 2,
-      child: Scaffold(
-      backgroundColor: scaffoldColor,
-      bottomNavigationBar: const CustomBottomNavBar(currentIndex: 0),
-      appBar: AppBar(
-        title: const Text("AmbaNotes"),
-        actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.bell),
-            onPressed: () {
-              controller.fetchNotifications();
-              Get.to(() => const NotificationsView());
-            },
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Obx(() => Text(
-                  "Good Morning, ${controller.apiService.username.value ?? 'User'}",
-                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                        fontSize: 24,
-                        color: AppTheme.onSurface,
-                      ),
-                )),
-            const SizedBox(height: 20),
-            _buildSearchBar(),
-            const SizedBox(height: 24),
-            _buildQuickActions(),
-            const SizedBox(height: 20),
-            _buildProcessingSection(context),
-            const SizedBox(height: 32),
-            _buildAgendaHeader(context),
-            const SizedBox(height: 16),
-            _buildAgendaList(),
-            const SizedBox(height: 24),
-            _buildGoogleCalendarSection(context),
+    return ClipRect(
+      child: OnboardingOverlay(
+        minStep: 0,
+        maxStep: 2,
+        child: Scaffold(
+        backgroundColor: scaffoldColor,
+        bottomNavigationBar: const CustomBottomNavBar(currentIndex: 0),
+        appBar: AppBar(
+          title: const Text("AmbaNotes"),
+          actions: [
+            IconButton(
+              icon: const Icon(LucideIcons.bell),
+              onPressed: () {
+                controller.fetchNotifications();
+                Get.to(() => const NotificationsView());
+              },
+            ),
           ],
         ),
-      ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Obx(() => Text(
+                    "Good Morning, ${controller.apiService.username.value ?? 'User'}",
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                          fontSize: 24,
+                          color: AppTheme.onSurface,
+                        ),
+                  )),
+              const SizedBox(height: 20),
+              _buildSearchBar(),
+              const SizedBox(height: 24),
+              _buildQuickActions(),
+              const SizedBox(height: 20),
+              _buildProcessingSection(context),
+              const SizedBox(height: 32),
+              _buildAgendaHeader(context),
+              const SizedBox(height: 16),
+              _buildAgendaList(),
+              const SizedBox(height: 24),
+              _buildGoogleCalendarSection(context),
+            ],
+          ),
+        ),
+        ),
       ),
     );
   }
@@ -100,7 +102,10 @@ class HomeView extends GetView<HomeController> {
         Expanded(
           flex: 2,
           child: Row(
-            key: onboardingCtrl.quickActionsGridKey,
+            key: (onboardingCtrl.isActive.value &&
+                    onboardingCtrl.currentStep.value == 1)
+                ? onboardingCtrl.quickActionsGridKey
+                : null,
             children: [
               Expanded(child: _buildActionItem(actions[0], 0)),
               const SizedBox(width: 12),
