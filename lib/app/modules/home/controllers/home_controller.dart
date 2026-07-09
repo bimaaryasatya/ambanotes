@@ -9,6 +9,7 @@ import '../../../data/services/api_service.dart';
 import '../../../data/services/notification_service.dart';
 import '../../archive/controllers/archive_controller.dart';
 import '../../profile/controllers/profile_controller.dart';
+import '../../onboarding/controllers/onboarding_controller.dart';
 import '../../../theme/app_theme.dart';
 
 class HomeController extends GetxController {
@@ -251,6 +252,11 @@ class HomeController extends GetxController {
           child: const Text("LIHAT FILES", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         ),
       );
+
+      // Notify onboarding that upload has started
+      if (Get.isRegistered<OnboardingController>()) {
+        Get.find<OnboardingController>().onUploadProcessing(tempId);
+      }
 
       // Start the background upload job asynchronously (non-blocking!)
       apiService.uploadDocument(bytes, filename).then((result) {

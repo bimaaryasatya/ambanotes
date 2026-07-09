@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../data/services/api_service.dart';
 import '../../../data/services/backup_registry_service.dart';
 import '../../archive/controllers/archive_controller.dart';
+import '../../onboarding/controllers/onboarding_controller.dart';
 
 class ArchiveDetailController extends GetxController {
   final apiService = Get.find<ApiService>();
@@ -44,6 +45,8 @@ class ArchiveDetailController extends GetxController {
   final aiSuggestedDelegation = ''.obs;
   final aiSuggestedReason = ''.obs;
 
+  final ScrollController scrollController = ScrollController();
+
   @override
   void onInit() {
     super.onInit();
@@ -63,6 +66,73 @@ class ArchiveDetailController extends GetxController {
         size: '0 KB',
       );
     }
+    _setupOnboardingScrollListener();
+  }
+
+  void _setupOnboardingScrollListener() {
+    if (!Get.isRegistered<OnboardingController>()) return;
+    final onboardingCtrl = Get.find<OnboardingController>();
+
+    // Scroll and measure when the onboarding step changes
+    ever(onboardingCtrl.currentStep, (_) => _scrollAndMeasureCurrentStep());
+
+    // Scroll and measure when loading finishes, ensuring coordinates are correct
+    ever(isLoading, (_) => _scrollAndMeasureCurrentStep());
+
+    // Sync onboarding highlights in real-time when the user or controller scrolls
+    scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (!Get.isRegistered<OnboardingController>()) return;
+    final onboardingCtrl = Get.find<OnboardingController>();
+    if (onboardingCtrl.isActive.value && onboardingCtrl.isArchiveDetailStep) {
+      onboardingCtrl.remeasure();
+    }
+  }
+
+  void _scrollAndMeasureCurrentStep() {
+    if (!Get.isRegistered<OnboardingController>()) return;
+    if (isLoading.value) return; // Wait until details are loaded
+
+    final onboardingCtrl = Get.find<OnboardingController>();
+    final step = onboardingCtrl.currentStep.value;
+    if (step < 4 || step > 6) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      GlobalKey? targetKey;
+      switch (step) {
+        case 4:
+          targetKey = onboardingCtrl.aiSummaryKey;
+          break;
+        case 5:
+          targetKey = onboardingCtrl.disposisiKey;
+          break;
+        case 6:
+          targetKey = onboardingCtrl.metadataKey;
+          break;
+      }
+
+      if (targetKey?.currentContext != null) {
+        Scrollable.ensureVisible(
+          targetKey!.currentContext!,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+          alignment: 0.3,
+        ).then((_) {
+          // Remeasure the coordinates after the scroll animation is complete
+          onboardingCtrl.remeasure();
+        });
+      } else {
+        onboardingCtrl.remeasure();
+      }
+    });
+  }
+
+  @override
+  void onClose() {
+    scrollController.dispose();
+    super.onClose();
   }
 
   Future<void> fetchDetailedData() async {

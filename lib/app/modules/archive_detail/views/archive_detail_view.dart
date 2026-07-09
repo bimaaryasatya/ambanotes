@@ -7,46 +7,52 @@ import 'package:ambanotes/app/routes/app_pages.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:ambanotes/app/widgets/drive_preview_widget.dart';
+import 'package:ambanotes/app/widgets/onboarding_overlay.dart';
+import 'package:ambanotes/app/modules/onboarding/controllers/onboarding_controller.dart';
 
 class ArchiveDetailView extends GetView<ArchiveDetailController> {
   const ArchiveDetailView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.surface,
-      appBar: AppBar(
-        title: const Text('Document Details'),
-        actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.download),
-            onPressed: () => controller.downloadDocument(),
-          ),
-          IconButton(
-            icon: const Icon(LucideIcons.share2),
-            onPressed: () => controller.shareDocument(),
-          ),
-        ],
-      ),
-      body: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Fetching details from AI analysis...',
-                    style: TextStyle(color: AppTheme.outline)),
-              ],
+    return OnboardingOverlay(
+      minStep: 4,
+      maxStep: 7,
+      child: Scaffold(
+        backgroundColor: AppTheme.surface,
+        appBar: AppBar(
+          title: const Text('Document Details'),
+          actions: [
+            IconButton(
+              icon: const Icon(LucideIcons.download),
+              onPressed: () => controller.downloadDocument(),
             ),
-          );
-        }
-        return SafeArea(
-          bottom: true,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
+            IconButton(
+              icon: const Icon(LucideIcons.share2),
+              onPressed: () => controller.shareDocument(),
+            ),
+          ],
+        ),
+        body: Obx(() {
+          if (controller.isLoading.value) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Fetching details from AI analysis...',
+                      style: TextStyle(color: AppTheme.outline)),
+                ],
+              ),
+            );
+          }
+          return SafeArea(
+            bottom: true,
+            child: SingleChildScrollView(
+              controller: controller.scrollController,
+              padding: const EdgeInsets.all(20),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeaderCard(),
@@ -172,7 +178,7 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
           ),
         );
       }),
-    );
+      ));
   }
 
   Widget _buildHeaderCard() {
@@ -378,7 +384,9 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
   }
 
   Widget _buildAISummaryCard() {
+    final onboardingCtrl = Get.find<OnboardingController>();
     return Container(
+      key: onboardingCtrl.aiSummaryKey,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -504,8 +512,11 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
   }
 
   Widget _buildMetadataSection() {
-    return Obx(() => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    final onboardingCtrl = Get.find<OnboardingController>();
+    return SizedBox(
+      key: onboardingCtrl.metadataKey,
+      child: Obx(() => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Extracted NER Entities & Metadata',
                 style: TextStyle(
@@ -535,7 +546,8 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
               ),
             ),
           ],
-        ));
+        )),
+      );
   }
 
   Widget _buildMetadataRow(String label, String value) {
@@ -798,6 +810,7 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
       final delName = controller.delegationName.value ?? 'Belum Ditentukan';
 
       return Container(
+        key: Get.find<OnboardingController>().disposisiKey,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -900,3 +913,4 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
     });
   }
 }
+

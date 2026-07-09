@@ -6,6 +6,8 @@ import 'package:ambanotes/app/theme/app_theme.dart';
 import 'package:ambanotes/app/routes/app_pages.dart';
 import 'package:ambanotes/app/data/models/models.dart';
 import 'package:ambanotes/app/widgets/custom_bottom_navbar.dart';
+import 'package:ambanotes/app/widgets/onboarding_overlay.dart';
+import 'package:ambanotes/app/modules/onboarding/controllers/onboarding_controller.dart';
 
 class ArchiveView extends GetView<ArchiveController> {
   const ArchiveView({Key? key}) : super(key: key);
@@ -13,7 +15,10 @@ class ArchiveView extends GetView<ArchiveController> {
   @override
   Widget build(BuildContext context) {
     final scaffoldColor = Theme.of(context).scaffoldBackgroundColor;
-    return Scaffold(
+    return OnboardingOverlay(
+      minStep: 3,
+      maxStep: 3,
+      child: Scaffold(
       backgroundColor: scaffoldColor,
       bottomNavigationBar: const CustomBottomNavBar(currentIndex: 1),
       appBar: AppBar(
@@ -64,6 +69,7 @@ class ArchiveView extends GetView<ArchiveController> {
             child: _buildDocumentList(),
           ),
         ],
+      ),
       ),
     );
   }
@@ -204,7 +210,14 @@ class ArchiveView extends GetView<ArchiveController> {
         itemCount: filteredDocs.length,
         itemBuilder: (context, index) {
           final doc = filteredDocs[index];
-          return Obx(() => _buildDocumentItem(doc));
+          return Obx(() {
+            final onboardingCtrl = Get.find<OnboardingController>();
+            final isFirstProcessed = index == 0 && doc.status != 'processing';
+            return SizedBox(
+              key: isFirstProcessed ? onboardingCtrl.firstDocumentKey : null,
+              child: _buildDocumentItem(doc),
+            );
+          });
         },
       );
     });
@@ -252,6 +265,9 @@ class ArchiveView extends GetView<ArchiveController> {
                 snackPosition: SnackPosition.BOTTOM,
               );
             } else {
+              if (Get.isRegistered<OnboardingController>()) {
+                Get.find<OnboardingController>().onDocumentTapped();
+              }
               Get.toNamed(Routes.ARCHIVE_DETAIL, arguments: doc);
             }
           },

@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 
 class ApiService extends GetxService {
   // Using local computer IP address so both Android Emulator AND physical phones can access it
-  final baseUrl = 'https://notes.bimazznxt.my.id'.obs;
+  final baseUrl = 'http://192.168.56.157:5009'.obs;
 
   final token = RxnString();
   final userId = RxnString();
@@ -29,7 +29,7 @@ class ApiService extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    
+
     // Restore session from local storage
     final storage = GetStorage();
     token.value = storage.read('token');
@@ -39,7 +39,7 @@ class ApiService extends GetxService {
     role.value = storage.read('role');
     orgId.value = storage.read('orgId');
     delegationId.value = storage.read('delegationId');
-    
+
     if (isAuthenticated) {
       getProfile(); // Refresh profile in background
     }

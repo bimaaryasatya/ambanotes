@@ -8,6 +8,7 @@ import 'app/data/services/api_service.dart';
 import 'app/data/services/backup_registry_service.dart';
 import 'app/data/services/notification_service.dart';
 import 'app/data/services/theme_service.dart';
+import 'app/modules/onboarding/controllers/onboarding_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +20,9 @@ void main() async {
   Get.put(NotificationService(), permanent: true);
   await Get.putAsync<ThemeService>(() async => ThemeService().init(),
       permanent: true);
+
+  // Onboarding tutorial controller
+  Get.put(OnboardingController(), permanent: true);
 
   // 1. Set system UI preferences
   SystemChrome.setPreferredOrientations([

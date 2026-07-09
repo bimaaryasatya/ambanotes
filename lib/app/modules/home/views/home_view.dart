@@ -7,6 +7,8 @@ import '../controllers/home_controller.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:ambanotes/app/routes/app_pages.dart';
 import 'package:ambanotes/app/widgets/custom_bottom_navbar.dart';
+import 'package:ambanotes/app/widgets/onboarding_overlay.dart';
+import 'package:ambanotes/app/modules/onboarding/controllers/onboarding_controller.dart';
 import 'notifications_view.dart';
 
 class HomeView extends GetView<HomeController> {
@@ -15,7 +17,10 @@ class HomeView extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     final scaffoldColor = Theme.of(context).scaffoldBackgroundColor;
-    return Scaffold(
+    return OnboardingOverlay(
+      minStep: 0,
+      maxStep: 2,
+      child: Scaffold(
       backgroundColor: scaffoldColor,
       bottomNavigationBar: const CustomBottomNavBar(currentIndex: 0),
       appBar: AppBar(
@@ -57,6 +62,7 @@ class HomeView extends GetView<HomeController> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -83,74 +89,85 @@ class HomeView extends GetView<HomeController> {
     final actions = [
       {'icon': LucideIcons.scan, 'label': 'SCAN'},
       {'icon': LucideIcons.upload, 'label': 'UPLOAD'},
-      {'icon': LucideIcons.sparkles, 'label': 'AMBAAI', 'isAi': true},
+      {'icon': LucideIcons.sparkles, 'label': 'AMBA AI', 'isAi': true},
       {'icon': LucideIcons.archive, 'label': 'ARCHIVE'},
     ];
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: actions.length,
-      itemBuilder: (context, index) {
-        final action = actions[index];
-        final isAi = action['isAi'] == true;
+    final onboardingCtrl = Get.find<OnboardingController>();
 
-        return InkWell(
-          onTap: () {
-            if (action['label'] == 'SCAN') {
-              controller.uploadDocument(true);
-            } else if (action['label'] == 'UPLOAD') {
-              controller.uploadDocument(false);
-            } else if (action['label'] == 'AMBAAI') {
-              Get.offAllNamed(Routes.CHAT);
-            } else if (action['label'] == 'ARCHIVE') {
-              Get.offAllNamed(Routes.ARCHIVE);
-            }
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              color: isAi ? AppTheme.primaryContainer : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border:
-                  Border.all(color: AppTheme.outlineVariant.withOpacity(0.3)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                )
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  action['icon'] as IconData,
-                  color: isAi ? AppTheme.onPrimaryContainer : AppTheme.primary,
-                  size: 24,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  action['label'] as String,
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                    color: isAi
-                        ? AppTheme.onPrimaryContainer
-                        : AppTheme.onSurfaceVariant,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ],
-            ),
+    return Row(
+      children: [
+        Expanded(
+          flex: 2,
+          child: Row(
+            key: onboardingCtrl.quickActionsGridKey,
+            children: [
+              Expanded(child: _buildActionItem(actions[0], 0)),
+              const SizedBox(width: 12),
+              Expanded(child: _buildActionItem(actions[1], 1)),
+            ],
           ),
-        );
+        ),
+        const SizedBox(width: 12),
+        Expanded(flex: 1, child: _buildActionItem(actions[2], 2)),
+        const SizedBox(width: 12),
+        Expanded(flex: 1, child: _buildActionItem(actions[3], 3)),
+      ],
+    );
+  }
+
+  Widget _buildActionItem(Map action, int index) {
+    final isAi = action['isAi'] == true;
+    return InkWell(
+      onTap: () {
+        if (index == 0) {
+          controller.uploadDocument(true);
+        } else if (index == 1) {
+          controller.uploadDocument(false);
+        } else if (index == 2) {
+          Get.offAllNamed(Routes.CHAT);
+        } else if (index == 3) {
+          Get.offAllNamed(Routes.ARCHIVE);
+        }
       },
+      child: Container(
+        height: 84,
+        decoration: BoxDecoration(
+          color: isAi ? AppTheme.primaryContainer : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border:
+              Border.all(color: AppTheme.outlineVariant.withOpacity(0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              action['icon'] as IconData,
+              color: isAi ? AppTheme.onPrimaryContainer : AppTheme.primary,
+              size: 24,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              action['label'] as String,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                color: isAi
+                    ? AppTheme.onPrimaryContainer
+                    : AppTheme.onSurfaceVariant,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -225,10 +242,11 @@ class HomeView extends GetView<HomeController> {
                     children: [
                       Text(
                         'Dokumen sedang diproses',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: AppTheme.onSurface,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.onSurface,
+                                ),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -285,7 +303,8 @@ class HomeView extends GetView<HomeController> {
         children: [
           Row(
             children: [
-              const Icon(LucideIcons.fileClock, size: 16, color: AppTheme.primary),
+              const Icon(LucideIcons.fileClock,
+                  size: 16, color: AppTheme.primary),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(

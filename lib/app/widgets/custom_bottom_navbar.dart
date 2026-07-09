@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ambanotes/app/routes/app_pages.dart';
 import 'package:ambanotes/app/theme/app_theme.dart';
+import 'package:ambanotes/app/modules/onboarding/controllers/onboarding_controller.dart';
 
 class CustomBottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -11,7 +12,11 @@ class CustomBottomNavBar extends StatelessWidget {
 
   void _onItemTapped(int index) {
     if (index == currentIndex) return;
-    
+
+    if (index == 1 && Get.isRegistered<OnboardingController>()) {
+      Get.find<OnboardingController>().onTabChanged(1);
+    }
+
     switch (index) {
       case 0:
         Get.offAllNamed(Routes.HOME);
@@ -84,28 +89,35 @@ class CustomBottomNavBar extends StatelessWidget {
     return GestureDetector(
       onTap: () => _onItemTapped(index),
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 24,
-            color: isSelected
-                ? AppTheme.primary
-                : (isDark ? const Color(0xFFB7C8D3) : AppTheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
+      child: Container(
+        key: index == 1 ? Get.find<OnboardingController>().archiveTabKey : null,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 24,
               color: isSelected
                   ? AppTheme.primary
                   : (isDark ? const Color(0xFFB7C8D3) : AppTheme.onSurfaceVariant),
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: isSelected
+                    ? AppTheme.primary
+                    : (isDark ? const Color(0xFFB7C8D3) : AppTheme.onSurfaceVariant),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
