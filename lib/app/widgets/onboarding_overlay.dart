@@ -55,7 +55,8 @@ class _OnboardingOverlayContent extends StatelessWidget {
           step >= minStep &&
           step <= maxStep &&
           isValidRoute &&
-          controller.apiService.isAuthenticated;
+          controller.apiService.isAuthenticated &&
+          !controller.isConfirmingSkip.value;
 
       if (!active) return const SizedBox.shrink();
 

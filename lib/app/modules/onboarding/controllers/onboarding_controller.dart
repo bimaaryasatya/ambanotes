@@ -14,6 +14,7 @@ class OnboardingController extends GetxController {
   final Rx<Rect?> cutoutRect = Rx<Rect?>(null);
   final Rx<Offset?> tooltipAnchor = Rx<Offset?>(null);
   final RxString currentRoute = ''.obs;
+  final RxBool isConfirmingSkip = false.obs;
 
   final GlobalKey quickActionsGridKey = GlobalKey();
   final GlobalKey processingSectionKey = GlobalKey();
@@ -137,6 +138,7 @@ class OnboardingController extends GetxController {
   }
 
   void skipOnboarding() {
+    isConfirmingSkip.value = true;
     Get.dialog(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -146,12 +148,16 @@ class OnboardingController extends GetxController {
             'You can restart the tour anytime from the Profile page.'),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () {
+              isConfirmingSkip.value = false;
+              Get.back();
+            },
             child: const Text('Continue Tour',
                 style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () {
+              isConfirmingSkip.value = false;
               Get.back();
               completeOnboarding();
             },
@@ -165,7 +171,9 @@ class OnboardingController extends GetxController {
           ),
         ],
       ),
-    );
+    ).then((_) {
+      isConfirmingSkip.value = false;
+    });
   }
 
   void onUploadProcessing(String docId) {
