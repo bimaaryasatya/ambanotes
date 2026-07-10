@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:ambanotes/app/theme/app_theme.dart';
 import 'package:ambanotes/app/widgets/custom_bottom_navbar.dart';
 import '../controllers/insight_controller.dart';
@@ -52,7 +53,7 @@ class InsightView extends GetView<InsightController> {
               const SizedBox(height: 24),
               _buildPredictiveWorkloadCard(),
               const SizedBox(height: 24),
-              _buildAmbaAiInsight(),
+              _buildAmbaAiInsight(context),
             ],
           ),
         );
@@ -972,7 +973,7 @@ class InsightView extends GetView<InsightController> {
     );
   }
 
-  Widget _buildAmbaAiInsight() {
+  Widget _buildAmbaAiInsight(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -1021,9 +1022,18 @@ class InsightView extends GetView<InsightController> {
           const SizedBox(height: 16),
           const Divider(height: 1, color: Colors.black12),
           const SizedBox(height: 16),
-          Text(
-            controller.weeklySummary.value,
-            style: const TextStyle(fontSize: 13, color: AppTheme.onSurface, height: 1.6),
+          MarkdownBody(
+            data: controller.weeklySummary.value,
+            styleSheet: MarkdownStyleSheet(
+              p: const TextStyle(fontSize: 13, color: AppTheme.onSurface, height: 1.6),
+              strong: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.onSurface, height: 1.6),
+              em: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: AppTheme.onSurface, height: 1.6),
+              listBullet: const TextStyle(fontSize: 13, color: AppTheme.onSurface),
+              listBulletPadding: const EdgeInsets.only(right: 6, top: 3),
+              h1: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.onSurface, height: 1.6),
+              h2: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.onSurface, height: 1.6),
+              h3: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.onSurface, height: 1.6),
+            ),
           ),
         ],
       ),
