@@ -67,6 +67,7 @@ class LoginView extends GetView<LoginController> {
                 hint: "example@email.com",
                 icon: LucideIcons.mail,
                 controller: controller.emailController,
+                semanticsIdentifier: "email_field",
               ),
               const SizedBox(height: 20),
               Obx(() => _buildTextField(
@@ -77,6 +78,7 @@ class LoginView extends GetView<LoginController> {
                     isPassword: true,
                     obscureText: !controller.isPasswordVisible.value,
                     onToggleVisibility: controller.togglePasswordVisibility,
+                    semanticsIdentifier: "password_field",
                   )),
               const SizedBox(height: 12),
               Align(
@@ -93,27 +95,30 @@ class LoginView extends GetView<LoginController> {
               SizedBox(
                 width: double.infinity,
                 height: 56,
-                child: Obx(() => ElevatedButton(
-                      onPressed: controller.isLoading.value
-                          ? null
-                          : () => controller.login(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                child: Obx(() => Semantics(
+                      identifier: 'login_button',
+                      child: ElevatedButton(
+                        onPressed: controller.isLoading.value
+                            ? null
+                            : () => controller.login(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
                         ),
-                        elevation: 0,
-                      ),
-                      child: controller.isLoading.value
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                              "Login",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                        child: controller.isLoading.value
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text(
+                                "Login",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
+                      ),
                     )),
               ),
               const SizedBox(height: 24),
@@ -152,6 +157,7 @@ class LoginView extends GetView<LoginController> {
     bool isPassword = false,
     bool obscureText = false,
     VoidCallback? onToggleVisibility,
+    String? semanticsIdentifier,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,25 +177,28 @@ class LoginView extends GetView<LoginController> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.5)),
           ),
-          child: TextField(
-            controller: controller,
-            obscureText: obscureText,
-            decoration: InputDecoration(
-              prefixIcon: Icon(icon, size: 20, color: AppTheme.outline),
-              suffixIcon: isPassword
-                  ? IconButton(
-                      icon: Icon(
-                        obscureText ? LucideIcons.eye : LucideIcons.eyeOff,
-                        size: 20,
-                        color: AppTheme.outline,
-                      ),
-                      onPressed: onToggleVisibility,
-                    )
-                  : null,
-              hintText: hint,
-              hintStyle: const TextStyle(fontSize: 14, color: AppTheme.outline),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Semantics(
+            identifier: semanticsIdentifier,
+            child: TextField(
+              controller: controller,
+              obscureText: obscureText,
+              decoration: InputDecoration(
+                prefixIcon: Icon(icon, size: 20, color: AppTheme.outline),
+                suffixIcon: isPassword
+                    ? IconButton(
+                        icon: Icon(
+                          obscureText ? LucideIcons.eye : LucideIcons.eyeOff,
+                          size: 20,
+                          color: AppTheme.outline,
+                        ),
+                        onPressed: onToggleVisibility,
+                      )
+                    : null,
+                hintText: hint,
+                hintStyle: const TextStyle(fontSize: 14, color: AppTheme.outline),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
             ),
           ),
         ),
