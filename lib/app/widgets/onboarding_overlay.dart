@@ -62,24 +62,27 @@ class _OnboardingOverlayContent extends StatelessWidget {
 
       final showCutout = step >= 1 && step <= 7;
 
-      return Stack(
-        children: [
-          if (showCutout && controller.cutoutRect.value != null)
-            Positioned.fill(
-              child: ClipPath(
-                clipper: _CutoutClipper(
-                    cutoutRect: controller.cutoutRect.value!),
+      return BlockSemantics(
+        blocking: true,
+        child: Stack(
+          children: [
+            if (showCutout && controller.cutoutRect.value != null)
+              Positioned.fill(
+                child: ClipPath(
+                  clipper: _CutoutClipper(
+                      cutoutRect: controller.cutoutRect.value!),
+                  child: Container(color: Colors.black.withOpacity(0.55)),
+                ),
+              ),
+            if (!showCutout)
+              Positioned.fill(
                 child: Container(color: Colors.black.withOpacity(0.55)),
               ),
-            ),
-          if (!showCutout)
-            Positioned.fill(
-              child: Container(color: Colors.black.withOpacity(0.55)),
-            ),
-          if (showCutout) _buildTooltip(context),
-          if (step == 0) _buildWelcomeCard(),
-          if (step == 8) _buildCompletionCard(),
-        ],
+            if (showCutout) _buildTooltip(context),
+            if (step == 0) _buildWelcomeCard(),
+            if (step == 8) _buildCompletionCard(),
+          ],
+        ),
       );
     });
   }
@@ -141,6 +144,10 @@ class _OnboardingOverlayContent extends StatelessWidget {
         description:
             'Let\'s take a quick tour to get you started with managing your documents efficiently.',
         buttonLabel: 'Start Tour',
+        buttonKey: const Key('start_tour_button'),
+        buttonSemanticsIdentifier: 'start_tour_button',
+        cardKey: const Key('onboarding_welcome_card'),
+        cardSemanticsIdentifier: 'onboarding_welcome_card',
         onButtonTap: () =>
             Get.find<OnboardingController>().nextStep(),
       ),
@@ -156,6 +163,10 @@ class _OnboardingOverlayContent extends StatelessWidget {
         description:
             'You\'ve learned the basics. Explore all features at your own pace.',
         buttonLabel: 'Finish',
+        buttonKey: const Key('finish_tour_button'),
+        buttonSemanticsIdentifier: 'finish_tour_button',
+        cardKey: const Key('onboarding_completion_card'),
+        cardSemanticsIdentifier: 'onboarding_completion_card',
         onButtonTap: () =>
             Get.find<OnboardingController>().completeOnboarding(),
       ),
@@ -169,74 +180,88 @@ class _OnboardingOverlayContent extends StatelessWidget {
     required String buttonLabel,
     required VoidCallback onButtonTap,
     Color? iconColor,
+    Key? buttonKey,
+    String? buttonSemanticsIdentifier,
+    Key? cardKey,
+    String? cardSemanticsIdentifier,
   }) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 32),
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.12),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: (iconColor ?? AppTheme.primary).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
+    return Semantics(
+      identifier: cardSemanticsIdentifier,
+      container: true,
+      explicitChildNodes: true,
+      child: Container(
+        key: cardKey,
+        margin: const EdgeInsets.symmetric(horizontal: 32),
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.12),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
             ),
-            child: Icon(icon, color: iconColor ?? AppTheme.primary, size: 32),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            description,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black54,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 28),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: onButtonTap,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
-                elevation: 0,
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: (iconColor ?? AppTheme.primary).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
               ),
-              child: Text(
-                buttonLabel,
-                style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.bold),
+              child: Icon(icon, color: iconColor ?? AppTheme.primary, size: 32),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            Text(
+              description,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black54,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: Semantics(
+                identifier: buttonSemanticsIdentifier,
+                child: ElevatedButton(
+                  key: buttonKey,
+                  onPressed: onButtonTap,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    buttonLabel,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -252,92 +277,103 @@ class _TooltipCard extends StatelessWidget {
     final data = _stepData[step];
     final controller = Get.find<OnboardingController>();
 
-    return Material(
-      elevation: 12,
-      borderRadius: BorderRadius.circular(20),
-      shadowColor: Colors.black.withOpacity(0.15),
-      child: Container(
-        width: 300,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.primary.withOpacity(0.15)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+    return Semantics(
+      identifier: 'onboarding_tooltip_card',
+      container: true,
+      explicitChildNodes: true,
+      child: Material(
+        key: const Key('onboarding_tooltip_card'),
+        elevation: 12,
+        borderRadius: BorderRadius.circular(20),
+        shadowColor: Colors.black.withOpacity(0.15),
+        child: Container(
+          width: 300,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppTheme.primary.withOpacity(0.15)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Step $step of 7',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primary,
+                      ),
+                    ),
                   ),
-                  child: Text(
-                    'Step $step of 7',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primary,
+                  const Spacer(),
+                  GestureDetector(
+                    key: const Key('onboarding_skip_button'),
+                    onTap: controller.skipOnboarding,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      child: const Icon(
+                        LucideIcons.x,
+                        size: 16,
+                        color: AppTheme.outline,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                data.title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                data.description,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.black54,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 42,
+                child: Semantics(
+                  identifier: 'onboarding_next_button',
+                  child: ElevatedButton(
+                    key: const Key('onboarding_next_button'),
+                    onPressed: controller.nextStep,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      data.buttonLabel,
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: controller.skipOnboarding,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    child: const Icon(
-                      LucideIcons.x,
-                      size: 16,
-                      color: AppTheme.outline,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              data.title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              data.description,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Colors.black54,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 42,
-              child: ElevatedButton(
-                onPressed: controller.nextStep,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                child: Text(
-                  data.buttonLabel,
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

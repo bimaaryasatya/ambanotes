@@ -23,6 +23,14 @@ class LoginController extends GetxController {
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.withOpacity(0.1),
         colorText: Colors.red,
+        messageText: Semantics(
+          identifier: 'login_failed_snackbar',
+          child: Text(
+            "Please fill in all fields",
+            key: const Key('login_failed_snackbar'),
+            style: TextStyle(color: Colors.red),
+          ),
+        ),
       );
       return;
     }

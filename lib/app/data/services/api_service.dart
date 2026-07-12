@@ -101,13 +101,33 @@ class ApiService extends GetxService {
         return true;
       } else {
         String errMsg = response.body?['error'] ?? 'Login failed';
-        Get.snackbar('Login Error', errMsg,
-            snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar(
+          'Login Error',
+          errMsg,
+          snackPosition: SnackPosition.BOTTOM,
+          messageText: Semantics(
+            identifier: 'login_failed_snackbar',
+            child: Text(
+              errMsg,
+              key: const Key('login_failed_snackbar'),
+            ),
+          ),
+        );
         return false;
       }
     } catch (e) {
-      Get.snackbar('Network Error', 'Cannot connect to backend server: $e',
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        'Network Error',
+        'Cannot connect to backend server: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        messageText: Semantics(
+          identifier: 'login_failed_snackbar',
+          child: Text(
+            'Cannot connect to backend server: $e',
+            key: const Key('login_failed_snackbar'),
+          ),
+        ),
+      );
       return false;
     }
   }
