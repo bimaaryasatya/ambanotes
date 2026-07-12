@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import '../../../data/services/api_service.dart';
 import '../../../data/models/models.dart';
 import '../../archive/controllers/archive_controller.dart';
@@ -8,6 +9,9 @@ import '../../../routes/app_pages.dart';
 
 class OnboardingController extends GetxController {
   final apiService = Get.find<ApiService>();
+  final GetStorage _storage = GetStorage();
+
+  static const String _completedKey = 'onboarding_completed';
 
   final RxInt currentStep = 0.obs;
   final RxBool isActive = false.obs;
@@ -26,7 +30,7 @@ class OnboardingController extends GetxController {
 
   static const int maxStep = 8;
 
-  bool get hasCompleted => false;
+  bool get hasCompleted => _storage.read(_completedKey) ?? false;
   bool get isOwner => apiService.isOwner;
 
   bool get shouldShowCurrentStep {
@@ -135,6 +139,11 @@ class OnboardingController extends GetxController {
 
   void completeOnboarding() {
     isActive.value = false;
+    _storage.write(_completedKey, true);
+  }
+
+  void resetOnboarding() {
+    _storage.remove(_completedKey);
   }
 
   void skipOnboarding() {

@@ -25,6 +25,8 @@ import 'package:ambanotes/app/modules/replace/bindings/replace_binding.dart';
 import 'package:ambanotes/app/modules/replace/views/replace_view.dart';
 import 'package:ambanotes/app/modules/splash/bindings/splash_binding.dart';
 import 'package:ambanotes/app/modules/splash/views/splash_view.dart';
+import 'package:ambanotes/app/modules/otp_verification/controllers/otp_verification_controller.dart';
+import 'package:ambanotes/app/modules/otp_verification/views/otp_verification_view.dart';
 
 part 'app_routes.dart';
 
@@ -100,6 +102,13 @@ class AppPages {
       name: _Paths.SPLASH,
       page: () => const SplashView(),
       binding: SplashBinding(),
+    ),
+    GetPage(
+      name: _Paths.OTP_VERIFICATION,
+      page: () => const OtpVerificationView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<OtpVerificationController>(() => OtpVerificationController());
+      }),
     ),
   ];
 }

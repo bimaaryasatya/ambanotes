@@ -79,7 +79,7 @@ class RegisterController extends GetxController {
     final action = setupOption.value == 'organization' ? 'create_org' : 'join_org';
     final orgName = setupOption.value == 'organization' ? organizationNameController.text : null;
 
-    final success = await apiService.register(
+    final result = await apiService.register(
       usernameInput: usernameController.text.trim(),
       emailInput: emailController.text.trim().toLowerCase(),
       passwordInput: passwordController.text,
@@ -89,8 +89,19 @@ class RegisterController extends GetxController {
     );
     isLoading.value = false;
 
-    if (success) {
-      Get.offAllNamed(Routes.LOGIN);
+    if (result['success'] == true) {
+      if (result['requires_verification'] == true) {
+        Get.offNamed(Routes.OTP_VERIFICATION, arguments: {
+          'email': result['email'],
+          'registration_token': result['registration_token'],
+          'purpose': 'verify_email',
+        });
+      } else {
+        Get.snackbar('Registration Success',
+            'User registered successfully. Please login.',
+            snackPosition: SnackPosition.BOTTOM);
+        Get.offAllNamed(Routes.LOGIN);
+      }
     }
   }
 

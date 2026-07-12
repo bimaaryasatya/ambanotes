@@ -7,10 +7,13 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../theme/app_theme.dart';
 import '../../../data/services/backup_registry_service.dart';
 import '../../../data/services/api_service.dart';
+import '../../../data/services/graphql/graphql_service.dart';
+import '../../../data/services/graphql/queries.dart';
 import '../../../utils/document_backup_helper.dart';
 
 class ArchiveController extends GetxController {
   final apiService = Get.find<ApiService>();
+  final graphQLService = Get.find<GraphQLService>();
   final backupRegistry = Get.find<BackupRegistryService>();
 
   final documents = <Document>[].obs;
@@ -56,21 +59,30 @@ class ArchiveController extends GetxController {
   Future<void> fetchDocuments() async {
     isLoading.value = true;
     try {
-      final docList = await apiService.listDocuments();
+      final data = await graphQLService.query(
+        kDocumentsQuery,
+        variables: {
+          'orgId': apiService.orgId.value,
+          'delegationId': apiService.delegationId.value,
+        },
+      );
+      final docList = data?['documents'] as List<dynamic>? ?? [];
       final List<Document> parsed = [];
       for (var item in docList) {
-        final classification = item['classification'] ?? {};
+        final map = item as Map<String, dynamic>;
+        final classification = map['classification'] as Map<String, dynamic>? ?? {};
+        final delegation = map['delegation'] as Map<String, dynamic>? ?? {};
         parsed.add(Document(
-          id: item['doc_id'] ?? '',
-          title: item['title'] ?? item['filename'] ?? 'Untitled Doc',
-          filename: item['filename'] ?? 'document.jpg',
-          summary: item['content'] ?? 'No text extracted.',
-          status: item['status'] ?? 'processed',
-          type: classification['label_name'] ?? 'Letter',
-          archivedDate: item['uploaded_at'] ?? 'Unknown',
+          id: map['id'] ?? '',
+          title: map['title'] ?? map['filename'] ?? 'Untitled Doc',
+          filename: map['filename'] ?? 'document.jpg',
+          summary: map['summary'] ?? 'No text extracted.',
+          status: map['status'] ?? 'processed',
+          type: classification['labelName'] ?? classification['label'] ?? 'Surat',
+          archivedDate: map['uploadedAt'] ?? 'Unknown',
           size: '1.2 MB',
-          delegationId: item['delegation_id'] ?? 'general',
-          delegationName: item['delegation_name'] ?? 'General',
+          delegationId: delegation['id'] ?? 'general',
+          delegationName: delegation['name'] ?? 'General',
         ));
       }
 
@@ -319,7 +331,11 @@ class ArchiveController extends GetxController {
 
     if (deleteBackup != null) {
       isLoading.value = true;
-      final success = await apiService.deleteDocument(doc.id);
+      final data = await graphQLService.query(
+        kDeleteDocumentMutation,
+        variables: {'id': doc.id},
+      );
+      final success = data != null;
       isLoading.value = false;
 
       if (success) {

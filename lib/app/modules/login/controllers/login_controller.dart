@@ -36,11 +36,25 @@ class LoginController extends GetxController {
     }
 
     isLoading.value = true;
-    final success = await apiService.login(emailController.text, passwordController.text);
+    final result = await apiService.login(emailController.text, passwordController.text);
     isLoading.value = false;
 
-    if (success) {
+    if (result['success'] == true) {
       Get.offAllNamed(Routes.HOME);
+    } else if (result['requires_otp'] == true) {
+      // New device - navigate to OTP verification
+      Get.toNamed(Routes.OTP_VERIFICATION, arguments: {
+        'email': result['email'],
+        'login_token': result['login_token'],
+        'purpose': 'verify_login',
+      });
+    } else if (result['requires_verification'] == true) {
+      // Email not verified - navigate to OTP verification
+      Get.toNamed(Routes.OTP_VERIFICATION, arguments: {
+        'email': result['email'],
+        'registration_token': result['registration_token'],
+        'purpose': 'verify_email',
+      });
     }
   }
 

@@ -131,7 +131,7 @@ class HomeController extends GetxController {
           id: item['doc_id'] ?? '',
           title: item['title'] ?? item['filename'] ?? 'Untitled Doc',
           filename: item['filename'] ?? 'document.jpg',
-          summary: item['content'] ?? 'No text extracted.',
+          summary: item['summary'] ?? 'No text extracted.',
           status: item['status'] ?? 'processed',
           type: classification['label_name'] ?? 'Letter',
           archivedDate: item['uploaded_at'] ?? 'Unknown',

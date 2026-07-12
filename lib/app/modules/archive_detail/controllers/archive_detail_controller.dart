@@ -11,11 +11,14 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../data/services/api_service.dart';
 import '../../../data/services/backup_registry_service.dart';
+import '../../../data/services/graphql/graphql_service.dart';
+import '../../../data/services/graphql/queries.dart';
 import '../../archive/controllers/archive_controller.dart';
 import '../../onboarding/controllers/onboarding_controller.dart';
 
 class ArchiveDetailController extends GetxController {
   final apiService = Get.find<ApiService>();
+  final graphQLService = Get.find<GraphQLService>();
   final backupRegistry = Get.find<BackupRegistryService>();
 
   late Document document;
@@ -138,64 +141,69 @@ class ArchiveDetailController extends GetxController {
   Future<void> fetchDetailedData() async {
     isLoading.value = true;
     try {
-      final detail = await apiService.getDocumentDetail(document.id);
+      final data = await graphQLService.query(
+        kDocumentDetailQuery,
+        variables: {'id': document.id},
+      );
+      final detail = data?['document'] as Map<String, dynamic>?;
       if (detail != null) {
-        final classification = detail['classification'] ?? {};
+        final classification = detail['classification'] as Map<String, dynamic>? ?? {};
+        final entities = detail['entities'] as Map<String, dynamic>? ?? {};
+        final del = detail['delegation'] as Map<String, dynamic>? ?? {};
+        final gd = detail['googleDrive'] as Map<String, dynamic>?;
+
         document = Document(
-          id: detail['doc_id'] ?? document.id,
+          id: detail['id'] ?? document.id,
           title: detail['title'] ?? detail['filename'] ?? document.title,
           filename: detail['filename'] ?? document.filename,
-          summary: detail['content'] ?? document.summary,
+          summary: detail['summary'] ?? document.summary,
           status: detail['status'] ?? document.status,
-          type: classification['label_name'] ?? document.type,
-          archivedDate: detail['uploaded_at'] ?? document.archivedDate,
+          type: classification['labelName'] ?? classification['label'] ?? document.type,
+          archivedDate: detail['uploadedAt'] ?? document.archivedDate,
           size: document.size,
-          delegationId: detail['delegation_id'] ?? document.delegationId,
-          delegationName: detail['delegation_name'] ?? document.delegationName,
+          delegationId: del['id'] ?? document.delegationId,
+          delegationName: del['name'] ?? document.delegationName,
         );
 
-        final entities = detail['entities'] ?? {};
         final rawDates = entities['dates'];
-        nomorSurat.value = entities['nomor_surat'] ?? 'Tidak Terdeteksi';
+        nomorSurat.value = entities['nomorSurat'] ?? 'Tidak Terdeteksi';
         perihal.value = entities['perihal'] ?? 'Tidak Terdeteksi';
         organisasiPenerbit.value =
-            entities['organisasi_penerbit'] ?? 'Tidak Terdeteksi';
-        documentContent.value = detail['content']?.toString() ?? document.summary;
+            entities['organisasiPenerbit'] ?? 'Tidak Terdeteksi';
+        documentContent.value = detail['content']?.toString() ?? '';
         detectedEntityDates.assignAll(
           rawDates is List ? rawDates.map((e) => e.toString()).toList() : const [],
         );
 
-        securitySuggestion.value = detail['security_suggestion'] ?? '';
-        uploadedBy.value = detail['uploaded_by_name']?.toString() ??
-            detail['uploaded_by']?.toString() ??
+        securitySuggestion.value = detail['securitySuggestion'] ?? '';
+        uploadedBy.value = detail['uploadedByName']?.toString() ??
+            detail['uploadedBy']?.toString() ??
             'Admin User';
-        isGeneratedAssignment.value = detail['is_generated'] == true &&
-            (detail['generator_type']?.toString() ?? '') == 'surat_tugas';
+        isGeneratedAssignment.value = detail['isGenerated'] == true &&
+            (detail['generatorType']?.toString() ?? '') == 'surat_tugas';
         isPendingAssignmentApproval.value = isGeneratedAssignment.value &&
-            ((detail['generator_status']?.toString() ?? '') ==
+            ((detail['generatorStatus']?.toString() ?? '') ==
                     'pending_approval' ||
                 (detail['status']?.toString() ?? '') == 'pending_approval');
         assignmentWorkflowMessage.value = _buildAssignmentWorkflowMessage();
 
         mimetype.value = detail['mimetype'] ?? 'image/jpeg';
 
-        final gd = detail['google_drive'];
-
         if (gd != null &&
-            ((gd['web_view_link'] ?? '').toString().isNotEmpty ||
-                (gd['web_content_link'] ?? '').toString().isNotEmpty)) {
+            ((gd['webViewLink'] ?? '').toString().isNotEmpty ||
+                (gd['webContentLink'] ?? '').toString().isNotEmpty)) {
           googleDriveConnected.value = true;
-          driveWebViewLink.value = gd['web_view_link'] ?? '';
-          driveContentLink.value = gd['web_content_link'] ?? '';
+          driveWebViewLink.value = gd['webViewLink'] ?? '';
+          driveContentLink.value = gd['webContentLink'] ?? '';
           base64Image.value = '';
         } else {
           googleDriveConnected.value = false;
           driveWebViewLink.value = '';
           driveContentLink.value = '';
-          base64Image.value = detail['file_data'] ?? '';
+          base64Image.value = detail['fileData'] ?? '';
         }
 
-        delegationId.value = detail['delegation_id'];
+        delegationId.value = del['id'];
         if (apiService.isOwner) {
           final list = await apiService.getDelegations();
           delegations.assignAll(List<Map<String, dynamic>>.from(list));

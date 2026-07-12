@@ -5,6 +5,7 @@ import 'package:get_storage/get_storage.dart';
 import 'app/routes/app_pages.dart';
 import 'app/theme/app_theme.dart';
 import 'app/data/services/api_service.dart';
+import 'app/data/services/graphql/graphql_service.dart';
 import 'app/data/services/backup_registry_service.dart';
 import 'app/data/services/notification_service.dart';
 import 'app/data/services/theme_service.dart';
@@ -17,6 +18,7 @@ void main() async {
 
   // Initialize Core Services globally
   Get.put(ApiService(), permanent: true);
+  Get.put(GraphQLService(), permanent: true);
   Get.put(BackupRegistryService(), permanent: true);
   Get.put(NotificationService(), permanent: true);
   await Get.putAsync<ThemeService>(() async => ThemeService().init(),

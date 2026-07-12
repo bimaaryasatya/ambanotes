@@ -1,11 +1,24 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
 
 class ApiService extends GetxService {
   // Using local computer IP address so both Android Emulator AND physical phones can access it
   final baseUrl = 'https://notes.bimazznxt.my.id/'.obs;
+  static const _deviceIdKey = 'device_uuid';
+
+  String get deviceId {
+    final storage = GetStorage();
+    String? id = storage.read(_deviceIdKey);
+    if (id == null || id.isEmpty) {
+      id = const Uuid().v4();
+      storage.write(_deviceIdKey, id);
+    }
+    return id;
+  }
 
   final token = RxnString();
   final userId = RxnString();
@@ -22,7 +35,7 @@ class ApiService extends GetxService {
   final googleDriveConnected = false.obs;
 
   bool get isAuthenticated => token.value != null;
-  bool get isOwner => role.value == 'owner';
+  bool get isOwner => role.value == 'owner' || role.value == 'admin';
 
   final GetConnect _connect = GetConnect();
 
@@ -76,15 +89,30 @@ class ApiService extends GetxService {
 
   // --- Auth Service Endpoints ---
 
-  Future<bool> login(String emailInput, String passwordInput) async {
+  /// Returns a map with result info: { success, requires_otp, login_token, email, error }
+  Future<Map<String, dynamic>> login(
+      String emailInput, String passwordInput) async {
     try {
       final response = await _post('/auth/login', {
         'email': emailInput,
         'password': passwordInput,
+        'device_id': deviceId,
       });
 
       if (response.statusCode == 200 && response.body != null) {
         final body = response.body;
+
+        // Check if OTP verification is required (new device)
+        if (body['requires_otp'] == true) {
+          return {
+            'success': false,
+            'requires_otp': true,
+            'login_token': body['login_token'] ?? '',
+            'email': body['email'] ?? emailInput,
+            'error': body['message'] ?? 'New device verification required',
+          };
+        }
+
         token.value = body['token'];
 
         final user = body['user'];
@@ -98,7 +126,21 @@ class ApiService extends GetxService {
         // Do not save session to local storage so that it automatically logs out when closed
 
         await getProfile(); // Load detailed profile
-        return true;
+        return {'success': true};
+      } else if (response.statusCode == 403 && response.body != null) {
+        // Handle unverified email case during login
+        final body = response.body;
+        if (body['requires_verification'] == true) {
+          return {
+            'success': false,
+            'requires_verification': true,
+            'registration_token': body['registration_token'] ?? '',
+            'email': body['email'] ?? emailInput,
+            'error': body['error'] ?? 'Email not verified',
+          };
+        }
+        String errMsg = body['error'] ?? 'Login failed';
+        return {'success': false, 'error': errMsg};
       } else {
         String errMsg = response.body?['error'] ?? 'Login failed';
         Get.snackbar(
@@ -113,7 +155,7 @@ class ApiService extends GetxService {
             ),
           ),
         );
-        return false;
+        return {'success': false, 'error': errMsg};
       }
     } catch (e) {
       Get.snackbar(
@@ -128,11 +170,15 @@ class ApiService extends GetxService {
           ),
         ),
       );
-      return false;
+      return {
+        'success': false,
+        'error': 'Cannot connect to backend server: $e'
+      };
     }
   }
 
-  Future<bool> register({
+  /// Returns a map with result info: { success, requires_verification, registration_token, email, error }
+  Future<Map<String, dynamic>> register({
     required String usernameInput,
     required String emailInput,
     required String passwordInput,
@@ -156,21 +202,102 @@ class ApiService extends GetxService {
 
       final response = await _post('/auth/register', payload);
 
-      if (response.statusCode == 201) {
-        Get.snackbar('Registration Success',
-            'User registered successfully. Please login.',
-            snackPosition: SnackPosition.BOTTOM);
-        return true;
+      if (response.statusCode == 201 && response.body != null) {
+        final body = response.body;
+        if (body['requires_verification'] == true) {
+          return {
+            'success': true,
+            'requires_verification': true,
+            'registration_token': body['registration_token'] ?? '',
+            'email': body['email'] ?? emailInput,
+          };
+        }
+        return {'success': true};
       } else {
         String errMsg = response.body?['error'] ?? 'Registration failed';
         Get.snackbar('Registration Error', errMsg,
             snackPosition: SnackPosition.BOTTOM);
-        return false;
+        return {'success': false, 'error': errMsg};
       }
     } catch (e) {
       Get.snackbar('Network Error', 'Cannot connect to backend server: $e',
           snackPosition: SnackPosition.BOTTOM);
-      return false;
+      return {
+        'success': false,
+        'error': 'Cannot connect to backend server: $e'
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> verifyEmail({
+    required String registrationToken,
+    required String otp,
+  }) async {
+    try {
+      final response = await _post('/auth/verify-email', {
+        'registration_token': registrationToken,
+        'otp': otp,
+      });
+      if (response.statusCode == 200) {
+        return {'success': true};
+      } else {
+        String errMsg = response.body?['error'] ?? 'Email verification failed';
+        return {'success': false, 'error': errMsg};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> verifyLogin({
+    required String loginToken,
+    required String otp,
+  }) async {
+    try {
+      final response = await _post('/auth/verify-login', {
+        'login_token': loginToken,
+        'otp': otp,
+      });
+      if (response.statusCode == 200 && response.body != null) {
+        final body = response.body;
+        token.value = body['token'];
+
+        final user = body['user'];
+        userId.value = user['id'];
+        username.value = user['username'];
+        email.value = user['email'];
+        role.value = user['role'];
+        orgId.value = user['org_id'];
+        delegationId.value = user['delegation_id'];
+
+        await getProfile();
+        return {'success': true};
+      } else {
+        String errMsg = response.body?['error'] ?? 'Login verification failed';
+        return {'success': false, 'error': errMsg};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> resendOtp({
+    required String email,
+    required String purpose,
+  }) async {
+    try {
+      final response = await _post('/auth/resend-otp', {
+        'email': email,
+        'purpose': purpose,
+      });
+      if (response.statusCode == 200) {
+        return {'success': true};
+      } else {
+        String errMsg = response.body?['error'] ?? 'Failed to resend OTP';
+        return {'success': false, 'error': errMsg};
+      }
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
     }
   }
 
