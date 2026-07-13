@@ -10,199 +10,201 @@ class AssignmentFormView extends GetView<AssignmentFormController> {
   @override
   Widget build(BuildContext context) {
     final bool isOwner = controller.apiService.isOwner;
-    return Scaffold(
-      backgroundColor: AppTheme.surface,
-      appBar: AppBar(
-        title: const Text('Buat Surat Tugas'),
-      ),
-      body: SafeArea(
-        bottom: true,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Form(
-            key: controller.formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildReferenceCard(),
-                const SizedBox(height: 24),
+    return ClipRect(
+      child: Scaffold(
+        backgroundColor: AppTheme.surface,
+        appBar: AppBar(
+          title: const Text('Buat Surat Tugas'),
+        ),
+        body: SafeArea(
+          bottom: true,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Form(
+              key: controller.formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildReferenceCard(),
+                  const SizedBox(height: 24),
 
-                // Missing assets warning banner
-                Obx(() {
-                  if (!controller.isAssetsMissing.value)
-                    return const SizedBox.shrink();
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 20),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.09),
-                      borderRadius: BorderRadius.circular(16),
-                      border:
-                          Border.all(color: Colors.orange.withOpacity(0.45)),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.only(top: 1),
-                          child: Icon(LucideIcons.alertTriangle,
-                              color: Colors.orange, size: 20),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Kop Surat / TTD Belum Tersedia',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.orange,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                isOwner
-                                    ? 'Kop surat atau tanda tangan digital untuk divisi ini belum tersedia/aktif. Silakan buka halaman Profil untuk mengelola dan mengaktifkan aset.'
-                                    : 'Kop surat atau tanda tangan digital untuk divisi Anda belum tersedia/aktif. Silakan segera hubungi Owner/Administrator untuk mengupload dan mengaktifkan aset divisi Anda.',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.orange,
-                                  height: 1.5,
-                                ),
-                              ),
-                            ],
+                  // Missing assets warning banner
+                  Obx(() {
+                    if (!controller.isAssetsMissing.value)
+                      return const SizedBox.shrink();
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 20),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.09),
+                        borderRadius: BorderRadius.circular(16),
+                        border:
+                            Border.all(color: Colors.orange.withOpacity(0.45)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(top: 1),
+                            child: Icon(LucideIcons.alertTriangle,
+                                color: Colors.orange, size: 20),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-
-                const Text('Detail Surat',
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.onSurface)),
-                const SizedBox(height: 16),
-
-                // Kop & TTD only shown to Owner
-                if (isOwner) ...[
-                  _buildDropdown(
-                    label: 'Kop Surat',
-                    icon: LucideIcons.building,
-                    value: controller.selectedKopSurat,
-                    options: controller.kopSuratOptions,
-                    onChanged: (val) {
-                      if (val != null) controller.selectedKopSurat.value = val;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  _buildDropdown(
-                    label: 'Tanda Tangan (TTD)',
-                    icon: LucideIcons.penTool,
-                    value: controller.selectedTtd,
-                    options: controller.ttdOptions,
-                    onChanged: (val) {
-                      if (val != null) controller.selectedTtd.value = val;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                ] else ...[
-                  _buildReadOnlyAssetTile(
-                    label: 'Kop Surat (Aktif)',
-                    icon: LucideIcons.building,
-                    value: controller.selectedKopSurat,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildReadOnlyAssetTile(
-                    label: 'Tanda Tangan (TTD Aktif)',
-                    icon: LucideIcons.penTool,
-                    value: controller.selectedTtd,
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                _buildTextField(
-                  label: 'Nomor Surat',
-                  controller: controller.letterNumberController,
-                  icon: LucideIcons.hash,
-                  validator: (val) => val == null || val.isEmpty
-                      ? 'Nomor surat wajib diisi'
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                _buildDateTimeField(
-                  label: 'Tanggal Penugasan',
-                  displayValue: () => controller.formattedDate,
-                  icon: LucideIcons.calendar,
-                  onTap: () => controller.pickDate(context),
-                ),
-                const SizedBox(height: 16),
-                _buildDateTimeField(
-                  label: 'Waktu Penugasan',
-                  displayValue: () => controller.formattedTime,
-                  icon: LucideIcons.clock,
-                  onTap: () => controller.pickTime(context),
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  label: 'Tempat / Lokasi',
-                  controller: controller.locationController,
-                  icon: LucideIcons.mapPin,
-                  validator: (val) =>
-                      val == null || val.isEmpty ? 'Tempat wajib diisi' : null,
-                ),
-                const SizedBox(height: 16),
-                _buildCurrentLocationCard(),
-                const SizedBox(height: 40),
-
-                // Submit button
-                Obx(() {
-                  final disabled = controller.isLoading.value ||
-                      controller.isAssetsMissing.value;
-                  return SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton.icon(
-                      onPressed: disabled ? null : controller.submitForm,
-                      icon: controller.isLoading.value
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                  color: Colors.white, strokeWidth: 2))
-                          : Icon(
-                              controller.isAssetsMissing.value
-                                  ? LucideIcons.alertCircle
-                                  : LucideIcons.checkCircle,
-                              color: Colors.white,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Kop Surat / TTD Belum Tersedia',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  isOwner
+                                      ? 'Kop surat atau tanda tangan digital untuk divisi ini belum tersedia/aktif. Silakan buka halaman Profil untuk mengelola dan mengaktifkan aset.'
+                                      : 'Kop surat atau tanda tangan digital untuk divisi Anda belum tersedia/aktif. Silakan segera hubungi Owner/Administrator untuk mengupload dan mengaktifkan aset divisi Anda.',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.orange,
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ],
                             ),
-                      label: Text(
-                        controller.isLoading.value
-                            ? 'Memproses...'
-                            : controller.isAssetsMissing.value
-                                ? 'Kop / TTD Belum Aktif'
-                                : isOwner
-                                    ? 'Terbitkan PDF Surat Tugas'
-                                    : 'Kirim Request ke Owner',
-                        style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white),
+                          ),
+                        ],
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            disabled ? Colors.grey.shade400 : AppTheme.primary,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
-                        elevation: disabled ? 0 : 2,
-                      ),
+                    );
+                  }),
+
+                  const Text('Detail Surat',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.onSurface)),
+                  const SizedBox(height: 16),
+
+                  // Kop & TTD only shown to Owner
+                  if (isOwner) ...[
+                    _buildDropdown(
+                      label: 'Kop Surat',
+                      icon: LucideIcons.building,
+                      value: controller.selectedKopSurat,
+                      options: controller.kopSuratOptions,
+                      onChanged: (val) {
+                        if (val != null) controller.selectedKopSurat.value = val;
+                      },
                     ),
-                  );
-                }),
-              ],
+                    const SizedBox(height: 16),
+                    _buildDropdown(
+                      label: 'Tanda Tangan (TTD)',
+                      icon: LucideIcons.penTool,
+                      value: controller.selectedTtd,
+                      options: controller.ttdOptions,
+                      onChanged: (val) {
+                        if (val != null) controller.selectedTtd.value = val;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                  ] else ...[
+                    _buildReadOnlyAssetTile(
+                      label: 'Kop Surat (Aktif)',
+                      icon: LucideIcons.building,
+                      value: controller.selectedKopSurat,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildReadOnlyAssetTile(
+                      label: 'Tanda Tangan (TTD Aktif)',
+                      icon: LucideIcons.penTool,
+                      value: controller.selectedTtd,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  _buildTextField(
+                    label: 'Nomor Surat',
+                    controller: controller.letterNumberController,
+                    icon: LucideIcons.hash,
+                    validator: (val) => val == null || val.isEmpty
+                        ? 'Nomor surat wajib diisi'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildDateTimeField(
+                    label: 'Tanggal Penugasan',
+                    displayValue: () => controller.formattedDate,
+                    icon: LucideIcons.calendar,
+                    onTap: () => controller.pickDate(context),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildDateTimeField(
+                    label: 'Waktu Penugasan',
+                    displayValue: () => controller.formattedTime,
+                    icon: LucideIcons.clock,
+                    onTap: () => controller.pickTime(context),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    label: 'Tempat / Lokasi',
+                    controller: controller.locationController,
+                    icon: LucideIcons.mapPin,
+                    validator: (val) =>
+                        val == null || val.isEmpty ? 'Tempat wajib diisi' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildCurrentLocationCard(),
+                  const SizedBox(height: 40),
+
+                  // Submit button
+                  Obx(() {
+                    final disabled = controller.isLoading.value ||
+                        controller.isAssetsMissing.value;
+                    return SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton.icon(
+                        onPressed: disabled ? null : controller.submitForm,
+                        icon: controller.isLoading.value
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2))
+                            : Icon(
+                                controller.isAssetsMissing.value
+                                    ? LucideIcons.alertCircle
+                                    : LucideIcons.checkCircle,
+                                color: Colors.white,
+                              ),
+                        label: Text(
+                          controller.isLoading.value
+                              ? 'Memproses...'
+                              : controller.isAssetsMissing.value
+                                  ? 'Kop / TTD Belum Aktif'
+                                  : isOwner
+                                      ? 'Terbitkan PDF Surat Tugas'
+                                      : 'Kirim Request ke Owner',
+                          style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              disabled ? Colors.grey.shade400 : AppTheme.primary,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16)),
+                          elevation: disabled ? 0 : 2,
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
             ),
           ),
         ),

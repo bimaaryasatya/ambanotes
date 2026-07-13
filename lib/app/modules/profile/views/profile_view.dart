@@ -29,7 +29,8 @@ class ProfileView extends GetView<ProfileController> {
   @override
   Widget build(BuildContext context) {
     final scaffoldColor = Theme.of(context).scaffoldBackgroundColor;
-    return Scaffold(
+    return ClipRect(
+      child: Scaffold(
       backgroundColor: scaffoldColor,
       appBar: AppBar(
         title: const Text("Pengaturan & Profil",
@@ -63,6 +64,7 @@ class ProfileView extends GetView<ProfileController> {
           ),
         );
       }),
+      ),
     );
   }
 

@@ -1,0 +1,462 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import '../modules/onboarding/controllers/onboarding_controller.dart';
+import '../theme/app_theme.dart';
+import '../routes/app_pages.dart';
+
+class OnboardingOverlay extends StatelessWidget {
+  final int minStep;
+  final int maxStep;
+  final Widget child;
+
+  const OnboardingOverlay({
+    super.key,
+    required this.child,
+    this.minStep = 0,
+    this.maxStep = 8,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        child,
+        _OnboardingOverlayContent(
+          minStep: minStep,
+          maxStep: maxStep,
+        ),
+      ],
+    );
+  }
+}
+
+class _OnboardingOverlayContent extends StatelessWidget {
+  final int minStep;
+  final int maxStep;
+
+  const _OnboardingOverlayContent({
+    required this.minStep,
+    required this.maxStep,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final controller = Get.find<OnboardingController>();
+      final step = controller.currentStep.value;
+
+      final currentRoute = controller.currentRoute.value;
+      final isValidRoute = currentRoute == Routes.HOME ||
+          currentRoute == Routes.ARCHIVE ||
+          currentRoute == Routes.ARCHIVE_DETAIL;
+
+      final active = controller.isActive.value &&
+          step >= minStep &&
+          step <= maxStep &&
+          isValidRoute &&
+          controller.apiService.isAuthenticated &&
+          !controller.isConfirmingSkip.value;
+
+      if (!active) return const SizedBox.shrink();
+
+      final showCutout = step >= 1 && step <= 7;
+
+      return BlockSemantics(
+        blocking: true,
+        child: Stack(
+          children: [
+            if (showCutout && controller.cutoutRect.value != null)
+              Positioned.fill(
+                child: ClipPath(
+                  clipper: _CutoutClipper(
+                      cutoutRect: controller.cutoutRect.value!),
+                  child: Container(color: Colors.black.withOpacity(0.55)),
+                ),
+              ),
+            if (!showCutout)
+              Positioned.fill(
+                child: Container(color: Colors.black.withOpacity(0.55)),
+              ),
+            if (showCutout) _buildTooltip(context),
+            if (step == 0) _buildWelcomeCard(),
+            if (step == 8) _buildCompletionCard(),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildTooltip(BuildContext context) {
+    final controller = Get.find<OnboardingController>();
+    final rect = controller.cutoutRect.value;
+    final step = controller.currentStep.value;
+
+    if (rect == null) {
+      return Center(
+        child: _TooltipCard(step: step),
+      );
+    }
+
+    final screen = MediaQuery.of(context).size;
+    const cardWidth = 300.0;
+    const cardHeight = 240.0;
+    
+    final spaceAbove = rect.top;
+    final spaceBelow = screen.height - rect.bottom;
+    
+    final hasNavbar = step >= 1 && step <= 3;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+    final bottomThreshold = hasNavbar ? (80.0 + bottomInset) : (16.0 + bottomInset);
+    
+    final placeAbove = (spaceBelow - bottomThreshold) < (cardHeight + 20) && spaceAbove > (cardHeight + 20);
+
+    double top = placeAbove
+        ? rect.top - cardHeight - 16
+        : rect.bottom + 16;
+        
+    final double minTop = MediaQuery.of(context).padding.top + 8.0;
+    double maxTop = screen.height - cardHeight - bottomThreshold;
+    if (maxTop < minTop) {
+      maxTop = minTop;
+    }
+    top = top.clamp(minTop, maxTop);
+
+    final double minLeft = 8.0;
+    double maxLeft = screen.width - cardWidth - 8.0;
+    if (maxLeft < minLeft) {
+      maxLeft = minLeft;
+    }
+    final left = ((screen.width - cardWidth) / 2).clamp(minLeft, maxLeft);
+
+    return Positioned(
+      top: top,
+      left: left,
+      child: _TooltipCard(step: step),
+    );
+  }
+
+  Widget _buildWelcomeCard() {
+    return Center(
+      child: _buildCenteredCard(
+        icon: LucideIcons.sparkles,
+        title: 'Welcome to AmbaNotes!',
+        description:
+            'Let\'s take a quick tour to get you started with managing your documents efficiently.',
+        buttonLabel: 'Start Tour',
+        buttonKey: const Key('start_tour_button'),
+        buttonSemanticsIdentifier: 'start_tour_button',
+        cardKey: const Key('onboarding_welcome_card'),
+        cardSemanticsIdentifier: 'onboarding_welcome_card',
+        onButtonTap: () =>
+            Get.find<OnboardingController>().nextStep(),
+      ),
+    );
+  }
+
+  Widget _buildCompletionCard() {
+    return Center(
+      child: _buildCenteredCard(
+        icon: LucideIcons.checkCircle2,
+        iconColor: Colors.green,
+        title: 'Tour Complete!',
+        description:
+            'You\'ve learned the basics. Explore all features at your own pace.',
+        buttonLabel: 'Finish',
+        buttonKey: const Key('finish_tour_button'),
+        buttonSemanticsIdentifier: 'finish_tour_button',
+        cardKey: const Key('onboarding_completion_card'),
+        cardSemanticsIdentifier: 'onboarding_completion_card',
+        onButtonTap: () =>
+            Get.find<OnboardingController>().completeOnboarding(),
+      ),
+    );
+  }
+
+  Widget _buildCenteredCard({
+    required IconData icon,
+    required String title,
+    required String description,
+    required String buttonLabel,
+    required VoidCallback onButtonTap,
+    Color? iconColor,
+    Key? buttonKey,
+    String? buttonSemanticsIdentifier,
+    Key? cardKey,
+    String? cardSemanticsIdentifier,
+  }) {
+    return Semantics(
+      identifier: cardSemanticsIdentifier,
+      container: true,
+      explicitChildNodes: true,
+      child: Container(
+        key: cardKey,
+        margin: const EdgeInsets.symmetric(horizontal: 32),
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.12),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: (iconColor ?? AppTheme.primary).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(icon, color: iconColor ?? AppTheme.primary, size: 32),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              description,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black54,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: Semantics(
+                identifier: buttonSemanticsIdentifier,
+                child: ElevatedButton(
+                  key: buttonKey,
+                  onPressed: onButtonTap,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    buttonLabel,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TooltipCard extends StatelessWidget {
+  final int step;
+
+  const _TooltipCard({required this.step});
+
+  @override
+  Widget build(BuildContext context) {
+    final data = _stepData[step];
+    final controller = Get.find<OnboardingController>();
+
+    return Semantics(
+      identifier: 'onboarding_tooltip_card',
+      container: true,
+      explicitChildNodes: true,
+      child: Material(
+        key: const Key('onboarding_tooltip_card'),
+        elevation: 12,
+        borderRadius: BorderRadius.circular(20),
+        shadowColor: Colors.black.withOpacity(0.15),
+        child: Container(
+          width: 300,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppTheme.primary.withOpacity(0.15)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Step $step of 7',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primary,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    key: const Key('onboarding_skip_button'),
+                    onTap: controller.skipOnboarding,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      child: const Icon(
+                        LucideIcons.x,
+                        size: 16,
+                        color: AppTheme.outline,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                data.title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                data.description,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.black54,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 42,
+                child: Semantics(
+                  identifier: 'onboarding_next_button',
+                  child: ElevatedButton(
+                    key: const Key('onboarding_next_button'),
+                    onPressed: controller.nextStep,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      data.buttonLabel,
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CutoutClipper extends CustomClipper<Path> {
+  final Rect cutoutRect;
+
+  _CutoutClipper({required this.cutoutRect});
+
+  @override
+  Path getClip(Size size) {
+    final path = Path()
+      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    final cutout = Path()
+      ..addRRect(
+          RRect.fromRectAndRadius(cutoutRect, const Radius.circular(16)));
+
+    return Path.combine(PathOperation.difference, path, cutout);
+  }
+
+  @override
+  bool shouldReclip(_CutoutClipper oldClipper) =>
+      oldClipper.cutoutRect != cutoutRect;
+}
+
+class _StepData {
+  final String title;
+  final String description;
+  final String buttonLabel;
+
+  const _StepData({
+    required this.title,
+    required this.description,
+    required this.buttonLabel,
+  });
+}
+
+const _stepData = <_StepData>[
+  _StepData(title: '', description: '', buttonLabel: ''),
+  _StepData(
+    title: 'Upload or Scan a Document',
+    description:
+        'Tap Scan to capture with your camera, or Upload to pick a file from your device. Your document will be analyzed by AI.',
+    buttonLabel: 'Skip \u2192',
+  ),
+  _StepData(
+    title: 'Waiting for Document Processing',
+    description:
+        'Your document is being processed by AI. Please wait for OCR and analysis to complete, or skip this step.',
+    buttonLabel: 'Skip \u2192',
+  ),
+  _StepData(
+    title: 'View in Files',
+    description:
+        'Once processed, go to the Files tab to see your uploaded document and its AI analysis.',
+    buttonLabel: 'Skip \u2192',
+  ),
+  _StepData(
+    title: 'Open a Document',
+    description:
+        'Tap on a document in the list to see its full details and extracted information.',
+    buttonLabel: 'Skip \u2192',
+  ),
+  _StepData(
+    title: 'AI Summary',
+    description:
+        'This is the AI-generated summary of your document. AmbaAI analyzes content, extracts entities, and classifies each document automatically.',
+    buttonLabel: 'Next',
+  ),
+  _StepData(
+    title: 'Disposisi Surat',
+    description:
+        'Assign this document to a division. First, set up your organization\'s divisions in Profile > Manajemen Organisasi.',
+    buttonLabel: 'Next',
+  ),
+  _StepData(
+    title: 'Extracted Entities',
+    description:
+        'These are key pieces of information extracted by AI \u2014 letter number, subject, sender organization, and more.',
+    buttonLabel: 'Next',
+  ),
+  _StepData(title: '', description: '', buttonLabel: ''),
+];

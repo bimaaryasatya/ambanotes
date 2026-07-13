@@ -25,6 +25,7 @@ class AgendaItem {
 class Document {
   final String id;
   final String title;
+  final String filename;
   final String summary;
   final String status;
   final String type;
@@ -36,6 +37,7 @@ class Document {
   Document({
     required this.id,
     required this.title,
+    required this.filename,
     required this.summary,
     required this.status,
     required this.type,

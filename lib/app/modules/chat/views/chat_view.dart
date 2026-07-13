@@ -16,7 +16,8 @@ class ChatView extends GetView<ChatController> {
   @override
   Widget build(BuildContext context) {
     final scaffoldColor = Theme.of(context).scaffoldBackgroundColor;
-    return Scaffold(
+    return ClipRect(
+      child: Scaffold(
       backgroundColor: scaffoldColor,
       bottomNavigationBar: const CustomBottomNavBar(currentIndex: 3),
       appBar: AppBar(
@@ -125,6 +126,7 @@ class ChatView extends GetView<ChatController> {
             child: _buildChatInput(),
           )),
         ],
+      ),
       ),
     );
   }
@@ -521,6 +523,7 @@ class ChatView extends GetView<ChatController> {
                             final doc = Document(
                               id: ref['doc_id'] ?? '',
                               title: filename,
+                              filename: filename,
                               summary: 'Loading details...',
                               status: 'processed',
                               type: 'Document',

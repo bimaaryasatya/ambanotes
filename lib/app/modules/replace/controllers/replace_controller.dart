@@ -37,6 +37,7 @@ class ReplaceController extends GetxController {
       document = Document(
         id: '',
         title: 'Dokumen tidak ditemukan',
+        filename: 'error.txt',
         summary: 'Data dokumen tidak dikirim ke halaman replace.',
         status: 'error',
         type: 'unknown',

@@ -9,7 +9,8 @@ class ForgotPasswordView extends GetView<ForgotPasswordController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return ClipRect(
+      child: Scaffold(
       backgroundColor: AppTheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -133,6 +134,7 @@ class ForgotPasswordView extends GetView<ForgotPasswordController> {
             );
           }),
         ),
+      ),
       ),
     );
   }

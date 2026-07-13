@@ -23,13 +23,15 @@ import 'package:ambanotes/app/modules/forgot_password/views/forgot_password_view
 import 'package:ambanotes/app/modules/forgot_password/controllers/forgot_password_controller.dart';
 import 'package:ambanotes/app/modules/replace/bindings/replace_binding.dart';
 import 'package:ambanotes/app/modules/replace/views/replace_view.dart';
+import 'package:ambanotes/app/modules/splash/bindings/splash_binding.dart';
+import 'package:ambanotes/app/modules/splash/views/splash_view.dart';
 
 part 'app_routes.dart';
 
 class AppPages {
   AppPages._();
 
-  static const INITIAL = Routes.LOGIN;
+  static const INITIAL = Routes.SPLASH;
 
   static final routes = [
     GetPage(
@@ -93,6 +95,11 @@ class AppPages {
       name: _Paths.REPLACE,
       page: () => const ReplaceView(),
       binding: ReplaceBinding(),
+    ),
+    GetPage(
+      name: _Paths.SPLASH,
+      page: () => const SplashView(),
+      binding: SplashBinding(),
     ),
   ];
 }

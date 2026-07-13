@@ -1,7 +1,7 @@
 name: ambanotes
 description: AI-powered document management and secretariat dashboard.
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -40,8 +40,16 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^3.0.0
   change_app_package_name: ^1.5.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/logo.png"
+  remove_alpha_ios: true
 
 flutter:
   uses-material-design: true
   assets:
     - assets/ml/
+    - assets/images/

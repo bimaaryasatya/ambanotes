@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService extends GetxService {
   // Using local computer IP address so both Android Emulator AND physical phones can access it
-  final baseUrl = 'https://notes.bimazznxt.my.id'.obs;
+  final baseUrl = 'https://notes.bimazznxt.my.id/'.obs;
 
   final token = RxnString();
   final userId = RxnString();
@@ -28,8 +29,19 @@ class ApiService extends GetxService {
   @override
   void onInit() {
     super.onInit();
+
+    // Clear session from local storage on startup to ensure logout when closed
+    final storage = GetStorage();
+    storage.remove('token');
+    storage.remove('userId');
+    storage.remove('username');
+    storage.remove('email');
+    storage.remove('role');
+    storage.remove('orgId');
+    storage.remove('delegationId');
+
     // Configure GetConnect
-    _connect.timeout = const Duration(seconds: 30);
+    _connect.timeout = const Duration(seconds: 120);
 
     // Add request interceptor to inject JWT token automatically
     _connect.httpClient.addRequestModifier<dynamic>((request) {
@@ -83,17 +95,39 @@ class ApiService extends GetxService {
         orgId.value = user['org_id'];
         delegationId.value = user['delegation_id'];
 
+        // Do not save session to local storage so that it automatically logs out when closed
+
         await getProfile(); // Load detailed profile
         return true;
       } else {
         String errMsg = response.body?['error'] ?? 'Login failed';
-        Get.snackbar('Login Error', errMsg,
-            snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar(
+          'Login Error',
+          errMsg,
+          snackPosition: SnackPosition.BOTTOM,
+          messageText: Semantics(
+            identifier: 'login_failed_snackbar',
+            child: Text(
+              errMsg,
+              key: const Key('login_failed_snackbar'),
+            ),
+          ),
+        );
         return false;
       }
     } catch (e) {
-      Get.snackbar('Network Error', 'Cannot connect to backend server: $e',
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        'Network Error',
+        'Cannot connect to backend server: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        messageText: Semantics(
+          identifier: 'login_failed_snackbar',
+          child: Text(
+            'Cannot connect to backend server: $e',
+            key: const Key('login_failed_snackbar'),
+          ),
+        ),
+      );
       return false;
     }
   }
@@ -997,5 +1031,15 @@ class ApiService extends GetxService {
     inviteCode.value = null;
     profileImageData.value = null;
     googleDriveConnected.value = false;
+
+    // Clear session from local storage
+    final storage = GetStorage();
+    storage.remove('token');
+    storage.remove('userId');
+    storage.remove('username');
+    storage.remove('email');
+    storage.remove('role');
+    storage.remove('orgId');
+    storage.remove('delegationId');
   }
 }

@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../data/services/api_service.dart';
 import '../../../data/services/backup_registry_service.dart';
 import '../../archive/controllers/archive_controller.dart';
+import '../../onboarding/controllers/onboarding_controller.dart';
 
 class ArchiveDetailController extends GetxController {
   final apiService = Get.find<ApiService>();
@@ -44,6 +45,8 @@ class ArchiveDetailController extends GetxController {
   final aiSuggestedDelegation = ''.obs;
   final aiSuggestedReason = ''.obs;
 
+  final ScrollController scrollController = ScrollController();
+
   @override
   void onInit() {
     super.onInit();
@@ -55,6 +58,7 @@ class ArchiveDetailController extends GetxController {
       document = Document(
         id: 'error',
         title: 'Error Loading Document',
+        filename: 'error.txt',
         summary: 'No details available.',
         status: 'Error',
         type: 'Error',
@@ -62,6 +66,73 @@ class ArchiveDetailController extends GetxController {
         size: '0 KB',
       );
     }
+    _setupOnboardingScrollListener();
+  }
+
+  void _setupOnboardingScrollListener() {
+    if (!Get.isRegistered<OnboardingController>()) return;
+    final onboardingCtrl = Get.find<OnboardingController>();
+
+    // Scroll and measure when the onboarding step changes
+    ever(onboardingCtrl.currentStep, (_) => _scrollAndMeasureCurrentStep());
+
+    // Scroll and measure when loading finishes, ensuring coordinates are correct
+    ever(isLoading, (_) => _scrollAndMeasureCurrentStep());
+
+    // Sync onboarding highlights in real-time when the user or controller scrolls
+    scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (!Get.isRegistered<OnboardingController>()) return;
+    final onboardingCtrl = Get.find<OnboardingController>();
+    if (onboardingCtrl.isActive.value && onboardingCtrl.isArchiveDetailStep) {
+      onboardingCtrl.remeasure();
+    }
+  }
+
+  void _scrollAndMeasureCurrentStep() {
+    if (!Get.isRegistered<OnboardingController>()) return;
+    if (isLoading.value) return; // Wait until details are loaded
+
+    final onboardingCtrl = Get.find<OnboardingController>();
+    final step = onboardingCtrl.currentStep.value;
+    if (step < 4 || step > 6) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      GlobalKey? targetKey;
+      switch (step) {
+        case 4:
+          targetKey = onboardingCtrl.aiSummaryKey;
+          break;
+        case 5:
+          targetKey = onboardingCtrl.disposisiKey;
+          break;
+        case 6:
+          targetKey = onboardingCtrl.metadataKey;
+          break;
+      }
+
+      if (targetKey?.currentContext != null) {
+        Scrollable.ensureVisible(
+          targetKey!.currentContext!,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+          alignment: 0.3,
+        ).then((_) {
+          // Remeasure the coordinates after the scroll animation is complete
+          onboardingCtrl.remeasure();
+        });
+      } else {
+        onboardingCtrl.remeasure();
+      }
+    });
+  }
+
+  @override
+  void onClose() {
+    scrollController.dispose();
+    super.onClose();
   }
 
   Future<void> fetchDetailedData() async {
@@ -72,7 +143,8 @@ class ArchiveDetailController extends GetxController {
         final classification = detail['classification'] ?? {};
         document = Document(
           id: detail['doc_id'] ?? document.id,
-          title: detail['filename'] ?? document.title,
+          title: detail['title'] ?? detail['filename'] ?? document.title,
+          filename: detail['filename'] ?? document.filename,
           summary: detail['content'] ?? document.summary,
           status: detail['status'] ?? document.status,
           type: classification['label_name'] ?? document.type,
@@ -176,7 +248,7 @@ class ArchiveDetailController extends GetxController {
       try {
         final bytes = base64Decode(base64Image.value);
         final tempDir = await getTemporaryDirectory();
-        final file = File('${tempDir.path}/${document.title}');
+        final file = File('${tempDir.path}/${document.filename}');
         await file.writeAsBytes(bytes);
 
         Get.snackbar(
@@ -244,7 +316,7 @@ class ArchiveDetailController extends GetxController {
         return;
       }
 
-      final safeName = document.title.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+      final safeName = document.filename.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
       final file = File('${targetDir.path}/$safeName');
 
       await file.writeAsBytes(bytes);
@@ -942,6 +1014,7 @@ class ArchiveDetailController extends GetxController {
 
     Get.dialog(
       AlertDialog(
+        scrollable: true,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(
           children: [
@@ -961,11 +1034,10 @@ class ArchiveDetailController extends GetxController {
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           ],
         ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
               if (aiSuggestedDelegation.value.isNotEmpty) ...[
                 const Text(
                     'AI menyarankan surat ini didisposisikan ke divisi berikut:',
@@ -1008,7 +1080,7 @@ class ArchiveDetailController extends GetxController {
                         color: AppTheme.onSurfaceVariant,
                         height: 1.4)),
               ],
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
               const Text('Pilih Divisi Penerima Konfirmasi:',
                   style: TextStyle(
                       fontSize: 12,
@@ -1016,6 +1088,7 @@ class ArchiveDetailController extends GetxController {
                       color: AppTheme.onSurface)),
               const SizedBox(height: 8),
               Obx(() => DropdownButtonFormField<String>(
+                    isExpanded: true,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12)),
@@ -1023,16 +1096,28 @@ class ArchiveDetailController extends GetxController {
                           horizontal: 12, vertical: 8),
                     ),
                     value: selectedDelIdObs.value,
-                    hint: const Text('Pilih Divisi'),
+                    hint: const Text(
+                      'Pilih Divisi',
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
                     items: [
                       const DropdownMenuItem<String>(
                         value: 'general',
-                        child: Text('General (Semua Tanpa Divisi)'),
+                        child: Text(
+                          'General (Semua Tanpa Divisi)',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
                       ),
                       ...delegations.map((d) {
                         return DropdownMenuItem<String>(
                           value: d['_id'],
-                          child: Text(d['name'] ?? ''),
+                          child: Text(
+                            d['name'] ?? '',
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
                         );
                       }).toList(),
                     ],
@@ -1042,7 +1127,6 @@ class ArchiveDetailController extends GetxController {
                   )),
             ],
           ),
-        ),
         actions: [
           TextButton(
             onPressed: () => Get.back(),

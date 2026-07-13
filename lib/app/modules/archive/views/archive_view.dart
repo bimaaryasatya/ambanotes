@@ -6,6 +6,8 @@ import 'package:ambanotes/app/theme/app_theme.dart';
 import 'package:ambanotes/app/routes/app_pages.dart';
 import 'package:ambanotes/app/data/models/models.dart';
 import 'package:ambanotes/app/widgets/custom_bottom_navbar.dart';
+import 'package:ambanotes/app/widgets/onboarding_overlay.dart';
+import 'package:ambanotes/app/modules/onboarding/controllers/onboarding_controller.dart';
 
 class ArchiveView extends GetView<ArchiveController> {
   const ArchiveView({Key? key}) : super(key: key);
@@ -14,57 +16,57 @@ class ArchiveView extends GetView<ArchiveController> {
   Widget build(BuildContext context) {
     final scaffoldColor = Theme.of(context).scaffoldBackgroundColor;
     return Scaffold(
-      backgroundColor: scaffoldColor,
-      bottomNavigationBar: const CustomBottomNavBar(currentIndex: 1),
-      appBar: AppBar(
-        title: Obx(() {
-          if (controller.isSelectionMode.value) {
-            return Text('${controller.selectedDocIds.length} dipilih');
-          }
-          return const Text("Document Archive");
-        }),
-        actions: [
-          Obx(() {
-            if (!controller.isSelectionMode.value)
-              return const SizedBox.shrink();
-
-            return Row(
-              children: [
-                IconButton(
-                  icon: const Icon(LucideIcons.checkSquare),
-                  onPressed: controller.selectAllVisibleDocuments,
-                ),
-                IconButton(
-                  icon: const Icon(LucideIcons.download),
-                  onPressed: controller.backupSelectedDocuments,
-                ),
-                if (controller.apiService.isOwner)
-                  IconButton(
-                    icon: const Icon(LucideIcons.trash2, color: Colors.red),
-                    onPressed: controller.deleteSelectedDocuments,
-                  ),
-                IconButton(
-                  icon: const Icon(LucideIcons.x),
-                  onPressed: controller.clearSelection,
-                ),
-              ],
-            );
+        backgroundColor: scaffoldColor,
+        bottomNavigationBar: const CustomBottomNavBar(currentIndex: 1),
+        appBar: AppBar(
+          title: Obx(() {
+            if (controller.isSelectionMode.value) {
+              return Text('${controller.selectedDocIds.length} dipilih');
+            }
+            return const Text("Document Archive");
           }),
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: _buildSearchBar(),
-          ),
-          _buildCategoryFilters(),
-          const SizedBox(height: 16),
-          Expanded(
-            child: _buildDocumentList(),
-          ),
-        ],
-      ),
+          actions: [
+            Obx(() {
+              if (!controller.isSelectionMode.value)
+                return const SizedBox.shrink();
+  
+              return Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(LucideIcons.checkSquare),
+                    onPressed: controller.selectAllVisibleDocuments,
+                  ),
+                  IconButton(
+                    icon: const Icon(LucideIcons.download),
+                    onPressed: controller.backupSelectedDocuments,
+                  ),
+                  if (controller.apiService.isOwner)
+                    IconButton(
+                      icon: const Icon(LucideIcons.trash2, color: Colors.red),
+                      onPressed: controller.deleteSelectedDocuments,
+                    ),
+                  IconButton(
+                    icon: const Icon(LucideIcons.x),
+                    onPressed: controller.clearSelection,
+                  ),
+                ],
+              );
+            }),
+          ],
+        ),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: _buildSearchBar(),
+            ),
+            _buildCategoryFilters(),
+            const SizedBox(height: 16),
+            Expanded(
+              child: _buildDocumentList(),
+            ),
+          ],
+        ),
     );
   }
 
@@ -192,6 +194,21 @@ class ArchiveView extends GetView<ArchiveController> {
 
   Widget _buildDocumentList() {
     return Obx(() {
+      if (controller.isLoading.value) {
+        return const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text(
+                'Memuat dokumen...',
+                style: TextStyle(color: AppTheme.outline),
+              ),
+            ],
+          ),
+        );
+      }
       final filteredDocs = controller.filteredDocuments;
       if (filteredDocs.isEmpty) {
         return const Center(
@@ -204,7 +221,14 @@ class ArchiveView extends GetView<ArchiveController> {
         itemCount: filteredDocs.length,
         itemBuilder: (context, index) {
           final doc = filteredDocs[index];
-          return Obx(() => _buildDocumentItem(doc));
+          return Obx(() {
+            final onboardingCtrl = Get.find<OnboardingController>();
+            final isFirstProcessed = index == 0 && doc.status != 'processing';
+            return SizedBox(
+              key: isFirstProcessed ? onboardingCtrl.firstDocumentKey : null,
+              child: _buildDocumentItem(doc),
+            );
+          });
         },
       );
     });
@@ -252,6 +276,9 @@ class ArchiveView extends GetView<ArchiveController> {
                 snackPosition: SnackPosition.BOTTOM,
               );
             } else {
+              if (Get.isRegistered<OnboardingController>()) {
+                Get.find<OnboardingController>().onDocumentTapped();
+              }
               Get.toNamed(Routes.ARCHIVE_DETAIL, arguments: doc);
             }
           },

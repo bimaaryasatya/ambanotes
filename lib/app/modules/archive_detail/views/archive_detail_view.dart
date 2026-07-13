@@ -7,6 +7,8 @@ import 'package:ambanotes/app/routes/app_pages.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:ambanotes/app/widgets/drive_preview_widget.dart';
+import 'package:ambanotes/app/widgets/onboarding_overlay.dart';
+import 'package:ambanotes/app/modules/onboarding/controllers/onboarding_controller.dart';
 
 class ArchiveDetailView extends GetView<ArchiveDetailController> {
   const ArchiveDetailView({Key? key}) : super(key: key);
@@ -45,135 +47,136 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
         return SafeArea(
           bottom: true,
           child: SingleChildScrollView(
+            controller: controller.scrollController,
             padding: const EdgeInsets.all(20),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeaderCard(),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeaderCard(),
+              const SizedBox(height: 24),
+              _buildAISummaryCard(),
+              _buildSecuritySuggestionCard(),
+              const SizedBox(height: 24),
+              if (controller.apiService.isOwner) ...[
+                _buildDispositionCard(context),
                 const SizedBox(height: 24),
-                _buildAISummaryCard(),
-                _buildSecuritySuggestionCard(),
-                const SizedBox(height: 24),
-                if (controller.apiService.isOwner) ...[
-                  _buildDispositionCard(context),
-                  const SizedBox(height: 24),
-                ],
-                _buildMetadataSection(),
+              ],
+              _buildMetadataSection(),
+              const SizedBox(height: 16),
+              _buildAssignmentWorkflowCard(),
+              if (controller.isGeneratedAssignment.value)
                 const SizedBox(height: 16),
-                _buildAssignmentWorkflowCard(),
-                if (controller.isGeneratedAssignment.value)
-                  const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: OutlinedButton.icon(
-                    onPressed: controller.backupToLocal,
-                    icon: const Icon(LucideIcons.downloadCloud),
-                    label: const Text(
-                      'Cadangkan ke Lokal Android',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.primary,
-                      side: const BorderSide(color: AppTheme.primary),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton.icon(
+                  onPressed: controller.backupToLocal,
+                  icon: const Icon(LucideIcons.downloadCloud),
+                  label: const Text(
+                    'Cadangkan ke Lokal Android',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.primary,
+                    side: const BorderSide(color: AppTheme.primary),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
                 ),
-                () {
-                  final showReminder = controller.document.type
-                          .toLowerCase()
-                          .contains('undangan') ||
-                      controller.document.type
-                          .toLowerCase()
-                          .contains('invitation') ||
-                      controller.document.summary
-                          .toLowerCase()
-                          .contains('rapat') ||
-                      controller.document.summary
-                          .toLowerCase()
-                          .contains('tanggal') ||
-                      controller.document.summary
-                          .toLowerCase()
-                          .contains('waktu');
-                  if (!showReminder) return const SizedBox.shrink();
-
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 16.0),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton.icon(
-                        onPressed: () =>
-                            controller.showAddReminderDialog(context),
-                        icon: const Icon(LucideIcons.calendarPlus,
-                            color: Colors.white),
-                        label: const Text(
-                          'Tambahkan Pengingat ke Google Calendar',
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.aiAccent,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16)),
-                          elevation: 2,
-                        ),
-                      ),
-                    ),
-                  );
-                }(),
-                const SizedBox(height: 24),
-                _buildDocumentPreview(context),
-                if (controller.document.type
+              ),
+              () {
+                final showReminder = controller.document.type
                         .toLowerCase()
-                        .contains('invitation') ||
+                        .contains('undangan') ||
                     controller.document.type
                         .toLowerCase()
-                        .contains('undangan')) ...[
-                  const SizedBox(height: 32),
-                  SizedBox(
+                        .contains('invitation') ||
+                    controller.document.summary
+                        .toLowerCase()
+                        .contains('rapat') ||
+                    controller.document.summary
+                        .toLowerCase()
+                        .contains('tanggal') ||
+                    controller.document.summary
+                        .toLowerCase()
+                        .contains('waktu');
+                if (!showReminder) return const SizedBox.shrink();
+
+                return Padding(
+                  padding: const EdgeInsets.only(top: 16.0),
+                  child: SizedBox(
                     width: double.infinity,
-                    height: 56,
+                    height: 50,
                     child: ElevatedButton.icon(
-                      onPressed: () => Get.toNamed(
-                          Routes.ASSIGNMENT_LETTER_FORM,
-                          arguments: {
-                            'doc_id': controller.document.id,
-                            'nomor_surat': controller.nomorSurat.value,
-                            'perihal': controller.perihal.value,
-                            'organisasi': controller.organisasiPenerbit.value,
-                            'delegation_id': controller.delegationId.value,
-                          }),
-                      icon:
-                          const Icon(LucideIcons.penTool, color: Colors.white),
+                      onPressed: () =>
+                          controller.showAddReminderDialog(context),
+                      icon: const Icon(LucideIcons.calendarPlus,
+                          color: Colors.white),
                       label: const Text(
-                        'Buat Surat Tugas',
+                        'Tambahkan Pengingat ke Google Calendar',
                         style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                             color: Colors.white),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
+                        backgroundColor: AppTheme.aiAccent,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16)),
-                        elevation: 4,
+                        elevation: 2,
                       ),
                     ),
                   ),
-                ],
+                );
+              }(),
+              const SizedBox(height: 24),
+              _buildDocumentPreview(context),
+              if (controller.document.type
+                      .toLowerCase()
+                      .contains('invitation') ||
+                  controller.document.type
+                      .toLowerCase()
+                      .contains('undangan')) ...[
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton.icon(
+                    onPressed: () => Get.toNamed(
+                        Routes.ASSIGNMENT_LETTER_FORM,
+                        arguments: {
+                          'doc_id': controller.document.id,
+                          'nomor_surat': controller.nomorSurat.value,
+                          'perihal': controller.perihal.value,
+                          'organisasi': controller.organisasiPenerbit.value,
+                          'delegation_id': controller.delegationId.value,
+                        }),
+                    icon:
+                        const Icon(LucideIcons.penTool, color: Colors.white),
+                    label: const Text(
+                      'Buat Surat Tugas',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      elevation: 4,
+                    ),
+                  ),
+                ),
               ],
-            ),
+            ],
           ),
-        );
-      }),
-    );
-  }
+        ),
+      );
+    }),
+  );
+}
 
   Widget _buildHeaderCard() {
     final doc = controller.document;
@@ -378,7 +381,9 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
   }
 
   Widget _buildAISummaryCard() {
+    final onboardingCtrl = Get.find<OnboardingController>();
     return Container(
+      key: onboardingCtrl.aiSummaryKey,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -504,8 +509,11 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
   }
 
   Widget _buildMetadataSection() {
-    return Obx(() => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    final onboardingCtrl = Get.find<OnboardingController>();
+    return SizedBox(
+      key: onboardingCtrl.metadataKey,
+      child: Obx(() => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Extracted NER Entities & Metadata',
                 style: TextStyle(
@@ -535,7 +543,8 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
               ),
             ),
           ],
-        ));
+        )),
+      );
   }
 
   Widget _buildMetadataRow(String label, String value) {
@@ -798,6 +807,7 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
       final delName = controller.delegationName.value ?? 'Belum Ditentukan';
 
       return Container(
+        key: Get.find<OnboardingController>().disposisiKey,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -900,3 +910,4 @@ class ArchiveDetailView extends GetView<ArchiveDetailController> {
     });
   }
 }
+

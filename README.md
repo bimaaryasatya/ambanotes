@@ -6,9 +6,9 @@
   <img src="https://img.shields.io/badge/Google_Drive-Cloud_Sync-4285F4?style=for-the-badge&logo=googledrive&logoColor=white" />
 </p>
 
-# 🏛️ Arcliva AI — Aplikasi Pengelolaan Dokumen Sekretariat Berbasis AI
+# 🏛️ AmbaNotes — Aplikasi Pengelolaan Dokumen Sekretariat Berbasis AI
 
-**Arcliva AI** adalah aplikasi mobile berbasis **Flutter** yang dirancang khusus untuk mendigitalkan, mengelola, dan mengarsipkan dokumen persuratan sekretariat secara cerdas menggunakan teknologi **Artificial Intelligence**. Aplikasi ini menggabungkan fitur OCR (Optical Character Recognition), NLP (Natural Language Processing), klasifikasi dokumen otomatis, AI chatbot kontekstual, serta integrasi **Google Drive** untuk penyimpanan awan yang aman — semuanya dalam satu platform yang elegan dan mudah digunakan.
+**AmbaNotes** adalah aplikasi mobile berbasis **Flutter** yang dirancang khusus untuk mendigitalkan, mengelola, dan mengarsipkan dokumen persuratan sekretariat secara cerdas menggunakan teknologi **Artificial Intelligence**. Aplikasi ini menggabungkan fitur OCR (Optical Character Recognition), NLP (Natural Language Processing), klasifikasi dokumen otomatis, AI chatbot kontekstual, serta integrasi **Google Drive** untuk penyimpanan awan yang aman — semuanya dalam satu platform yang elegan dan mudah digunakan.
 
 ---
 
@@ -27,7 +27,7 @@
   - [5. Archive (Document List) Page](#5--archive-document-list-page)
   - [6. Archive Detail Page](#6--archive-detail-page)
   - [7. Assignment Letter Form Page](#7--assignment-letter-form-page-buat-surat-tugas)
-  - [8. AI Chat Page (ArclivaAI)](#8--ai-chat-page-arclivaai)
+  - [8. AI Chat Page (AmbaAI)](#8--ai-chat-page-ambaai)
   - [9. Insight & Analytics Page](#9--insight--analytics-page)
   - [10. Profile & Settings Page](#10--profile--settings-page)
   - [11. Manage Enterprise Page](#11--manage-enterprise-page-manajemen-organisasi)
@@ -44,11 +44,11 @@
 
 ## 🌟 Gambaran Umum
 
-Arcliva AI lahir dari kebutuhan nyata sekretariat organisasi/gereja/perusahaan yang masih mengelola surat-menyurat secara manual. Dengan Arcliva AI, seluruh proses — mulai dari **pemindaian surat masuk**, **ekstraksi teks otomatis**, **klasifikasi jenis surat**, **ringkasan AI**, hingga **pembuatan surat tugas balasan** — diotomatisasi menggunakan pipeline kecerdasan buatan.
+AmbaNotes lahir dari kebutuhan nyata sekretariat organisasi/gereja/perusahaan yang masih mengelola surat-menyurat secara manual. Dengan AmbaNotes, seluruh proses — mulai dari **pemindaian surat masuk**, **ekstraksi teks otomatis**, **klasifikasi jenis surat**, **ringkasan AI**, hingga **pembuatan surat tugas balasan** — diotomatisasi menggunakan pipeline kecerdasan buatan.
 
 ### Masalah yang Diselesaikan
 
-| Masalah Tradisional | Solusi Arcliva AI |
+| Masalah Tradisional | Solusi AmbaNotes |
 |---|---|
 | Arsip surat fisik rawan hilang/rusak | Digitalisasi & cloud backup otomatis ke Google Drive |
 | Pencarian dokumen manual memakan waktu | Semantic Search berbasis AI embeddings |
@@ -808,7 +808,7 @@ Output: Dokumen terindeks, ringkasan, metadata, searchable
 
 ## ☁️ Integrasi Google Drive
 
-Arcliva AI mendukung integrasi penuh dengan Google Drive untuk keamanan dan aksesibilitas dokumen.
+AmbaNotes mendukung integrasi penuh dengan Google Drive untuk keamanan dan aksesibilitas dokumen.
 
 ### Alur Integrasi:
 
@@ -923,7 +923,7 @@ final baseUrl = 'https://notes.bimazznxt.my.id'.obs;
 
 ## 🎨 Design System
 
-Arcliva AI menggunakan **Material Design 3** dengan palet warna kustom:
+AmbaNotes menggunakan **Material Design 3** dengan palet warna kustom:
 
 | Token | Hex | Penggunaan |
 |---|---|---|
@@ -946,5 +946,5 @@ Proyek ini dikembangkan sebagai bagian dari tugas **Capstone Project Semester 6*
 ---
 
 <p align="center">
-  <strong>Arcliva AI</strong> — Digitalisasi Cerdas untuk Sekretariat Modern 🏛️✨
+  <strong>AmbaNotes</strong> — Digitalisasi Cerdas untuk Sekretariat Modern 🏛️✨
 </p>

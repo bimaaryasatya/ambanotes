@@ -8,6 +8,8 @@ import 'app/data/services/api_service.dart';
 import 'app/data/services/backup_registry_service.dart';
 import 'app/data/services/notification_service.dart';
 import 'app/data/services/theme_service.dart';
+import 'app/modules/onboarding/controllers/onboarding_controller.dart';
+import 'app/widgets/onboarding_overlay.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +21,9 @@ void main() async {
   Get.put(NotificationService(), permanent: true);
   await Get.putAsync<ThemeService>(() async => ThemeService().init(),
       permanent: true);
+
+  // Onboarding tutorial controller
+  Get.put(OnboardingController(), permanent: true);
 
   // 1. Set system UI preferences
   SystemChrome.setPreferredOrientations([
@@ -44,6 +49,18 @@ class AmbaNotesApp extends GetView<ThemeService> {
         darkTheme: AppTheme.dark,
         themeMode: controller.themeMode,
         defaultTransition: Transition.fade,
+        routingCallback: (routing) {
+          if (Get.isRegistered<OnboardingController>()) {
+            Get.find<OnboardingController>().updateRoute(routing?.current);
+          }
+        },
+        builder: (context, child) {
+          return OnboardingOverlay(
+            minStep: 0,
+            maxStep: 8,
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
       ),
     );
   }
